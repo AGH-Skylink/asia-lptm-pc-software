@@ -1,13 +1,14 @@
-# Nadajnik i odbiornik akustyczny
+# Acoustic transmitter and receiver
 
-Dwie aplikacje okienkowe dla Windows 11. Nadajnik może odtwarzać plik audio,
-generować sinus 0–20 kHz i wysyłać tekst metodą FSK przez głośnik. Odbiornik
-przechwytuje mikrofon, dekoduje tekst, pokazuje przebieg na oscyloskopie,
-zapisuje tekst i opcjonalnie kieruje dźwięk z mikrofonu na głośnik.
+Two desktop applications for Windows 11. The transmitter can play an audio
+file, generate a sine wave from 0 to 20 kHz, and send text through a speaker
+using FSK. The receiver captures microphone input, decodes text, displays the
+waveform on an oscilloscope, saves received text, and can optionally monitor
+the microphone through a speaker.
 
-## Uruchomienie ze źródeł
+## Run from source
 
-Zainstaluj Python 3.11 lub nowszy. W katalogu projektu na Windows:
+Install Python 3.11 or newer. In the project directory on Windows, run:
 
 ```bat
 py -3 -m venv .venv
@@ -15,47 +16,48 @@ py -3 -m venv .venv
 .venv\Scripts\python.exe transmitter.py
 ```
 
-Odbiornik uruchom w drugim oknie terminala poleceniem
+Start the receiver in a second terminal window with
 `.venv\Scripts\python.exe receiver.py`.
 
-Uruchom programy na osobnych komputerach lub użyj dwóch urządzeń audio.
-Przy dwóch programach na jednym komputerze wybierz osobne wejście i wyjście.
-W obu oknach ustaw identyczne częstotliwości dla bitów `0` i `1` oraz identyczną
-szybkość transmisji. Najpierw włącz odbiornik, potem naciśnij **Wyślij tekst**.
-Domyślne 1200/2200 Hz i 25 bitów/s są punktem startowym. Odbiór zależy od
-głośności, mikrofonu, odległości i hałasu w pomieszczeniu. Nadawanie długich
-wiadomości trwa odpowiednio dłużej; maksymalna wiadomość ma 2048 bajtów UTF-8.
+Run the applications on separate computers or use two audio devices. If both
+applications run on one computer, select separate input and output devices.
+Set the same frequencies for bits `0` and `1` and the same bit rate in both
+windows. Start the receiver first, then click **Wyślij tekst** (Send text) in
+the transmitter. The default 1200/2200 Hz and 25 bits/s are a starting point.
+Reception depends on volume, microphone, distance, and ambient noise. Longer
+messages take proportionally longer to transmit. The maximum message size is
+2048 UTF-8 bytes.
 
-Suwak poziomu ustawia amplitudę cyfrową w procentach. Napięcie w woltach na
-fizycznym wyjściu zależy od karty dźwiękowej, ustawień Windows i wzmacniacza;
-podanie wartości w V wymaga pomiaru oraz kalibracji. Sygnał 20 kHz jest możliwy
-cyfrowo przy próbkowaniu 48 kHz, ale zwykłe głośniki i mikrofony mogą go nie
-przenosić. Dla odsłuchu mikrofonu użyj słuchawek lub ogranicz poziom, żeby
-uniknąć sprzężenia akustycznego.
+The level slider sets digital amplitude as a percentage. The physical output
+voltage depends on the sound card, Windows settings, and amplifier; displaying
+volts would require measurement and calibration. A 20 kHz signal can be
+generated digitally at a 48 kHz sample rate, but ordinary speakers and
+microphones may not reproduce it. For microphone monitoring, use headphones
+or keep the level low to avoid acoustic feedback.
 
-Plik audio jest **odtwarzany**, a nie przesyłany jako dane do odtworzenia pliku
-na komputerze odbiorcy. Obsługiwane formaty zależą od biblioteki libsndfile
-dołączonej do `soundfile`; WAV jest najbezpieczniejszym wyborem.
+An audio file is **played locally**; it is not transmitted as data for the
+receiver to reconstruct. Supported formats depend on the libsndfile library
+bundled with `soundfile`. WAV is the safest choice.
 
-## Dwie binarki Windows
+## Build the two Windows executables
 
-Na komputerze z Windows uruchom `build_windows.bat`. Pliki wynikowe trafią do
-`dist\Nadajnik.exe` i `dist\Odbiornik.exe`. PyInstaller wymaga budowania na
-systemie docelowym, więc ten skrypt trzeba uruchomić na Windows, a potem
-sprawdzić wejście i wyjście dźwięku na docelowych urządzeniach.
+Run `build_windows.bat` on Windows. The resulting files are
+`dist\Nadajnik.exe` and `dist\Odbiornik.exe`. PyInstaller must build on
+the target operating system, so run this script on Windows and then check the
+audio input and output on the target devices.
 
-Na komputerze użytym do testów gotowe pliki z kompilacji na Windows 11 w QEMU
-znajdują się w `vm/results/Nadajnik.exe` i `vm/results/Odbiornik.exe`.
-Wyniki testów są w tym samym folderze. Katalog `vm/results/` zawiera lokalne
-artefakty i nie jest częścią repozytorium Git. Opis maszyny i sposób połączenia
-VNC: `vm/README.md`.
+On the computer used for testing, executables built in a Windows 11 QEMU
+guest are also available at `vm/results/Nadajnik.exe` and
+`vm/results/Odbiornik.exe`. Test results are in the same directory.
+`vm/results/` contains local artifacts and is not part of the Git repository.
+For VM setup and VNC access, see [vm/README.md](vm/README.md).
 
-## Sprawdzenie protokołu
+## Test the protocol
 
 ```bat
 .venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
-Test sprawdza odbiór tekstu UTF-8 przy losowych granicach pakietów audio i
-szumie oraz odrzucenie wiadomości z błędną sumą kontrolną. Nie zastępuje próby
-przez rzeczywisty głośnik i mikrofon.
+The tests check UTF-8 text reception with arbitrary audio block boundaries
+and noise, and rejection of messages with an invalid checksum. They do not
+replace a test using a physical speaker and microphone.
