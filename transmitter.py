@@ -1,0 +1,165 @@
+"""Windows-oriented acoustic transmitter GUI."""
+
+from __future__ import annotations
+
+import tkinter as tk
+from pathlib import Path
+from queue import Empty
+from tkinter import filedialog, messagebox, ttk
+
+from audio_runtime import OutputPlayer
+from gui_common import DevicePicker, FSKFields
+from modem import encode_text, estimated_seconds, fsk_chunks, live_tone_chunks
+
+
+class Transmitter(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title("Nadajnik akustyczny")
+        self.geometry("820x680")
+        self.minsize(690, 560)
+        self.player = OutputPlayer()
+        self.level = tk.IntVar(value=40)
+        self.status = tk.StringVar(value="Gotowy.")
+        self.text_source = tk.StringVar(value="field")
+        self.text_path = tk.StringVar()
+        self.audio_path = tk.StringVar()
+        self.tone_hz = tk.IntVar(value=1_000)
+        self.live_hz = 1_000
+        self.live_level = 0.4
+        self.tone_hz.trace_add("write", self._update_generator)
+        self.level.trace_add("write", self._update_generator)
+
+        body = ttk.Frame(self, padding=14)
+        body.pack(fill="both", expand=True)
+        self.output = DevicePicker(body, "Wyjście dźwięku", "output")
+        self.output.pack(fill="x", pady=(0, 12))
+
+        level_box = ttk.LabelFrame(body, text="Poziom sygnału [%]")
+        level_box.pack(fill="x", pady=(0, 12))
+        tk.Scale(
+            level_box, from_=0, to=100, orient="horizontal", variable=self.level,
+        ).pack(fill="x", padx=8)
+        ttk.Label(
+            level_box, text="Wartość w woltach wymaga kalibracji karty dźwiękowej i wzmacniacza."
+        ).pack(anchor="w", padx=8, pady=(0, 6))
+
+        tabs = ttk.Notebook(body)
+        tabs.pack(fill="both", expand=True)
+        self._text_tab(tabs)
+        self._generator_tab(tabs)
+        self._audio_tab(tabs)
+
+        footer = ttk.Frame(body)
+        footer.pack(fill="x", pady=(12, 0))
+        ttk.Button(footer, text="Zatrzymaj dźwięk", command=self.stop).pack(side="right")
+        ttk.Label(footer, textvariable=self.status, wraplength=620).pack(side="left", fill="x", expand=True)
+        self.after(100, self._poll)
+        self.protocol("WM_DELETE_WINDOW", self._close)
+
+    def _text_tab(self, tabs: ttk.Notebook) -> None:
+        tab = ttk.Frame(tabs, padding=10)
+        tabs.add(tab, text="Tekst FSK")
+        self.fsk = FSKFields(tab)
+        self.fsk.pack(fill="x", pady=(0, 10))
+        source = ttk.Frame(tab)
+        source.pack(fill="x")
+        ttk.Radiobutton(source, text="Pole tekstowe", variable=self.text_source, value="field").pack(side="left")
+        ttk.Radiobutton(source, text="Plik UTF-8", variable=self.text_source, value="file").pack(side="left", padx=12)
+        ttk.Button(source, text="Wybierz plik", command=self._choose_text).pack(side="right")
+        ttk.Entry(tab, textvariable=self.text_path).pack(fill="x", pady=(6, 8))
+        self.text_input = tk.Text(tab, height=7, wrap="word")
+        self.text_input.pack(fill="both", expand=True)
+        self.text_input.insert("1.0", "Przykładowa wiadomość")
+        ttk.Button(tab, text="Wyślij tekst", command=self.send_text).pack(anchor="e", pady=(10, 0))
+
+    def _generator_tab(self, tabs: ttk.Notebook) -> None:
+        tab = ttk.Frame(tabs, padding=12)
+        tabs.add(tab, text="Generator")
+        ttk.Label(tab, text="Częstotliwość sinusa: 0–20000 Hz").pack(anchor="w")
+        tk.Scale(
+            tab, from_=0, to=20_000, resolution=10, orient="horizontal", variable=self.tone_hz,
+        ).pack(fill="x", pady=(5, 16))
+        ttk.Button(tab, text="Uruchom generator", command=self.start_tone).pack(anchor="e")
+
+    def _audio_tab(self, tabs: ttk.Notebook) -> None:
+        tab = ttk.Frame(tabs, padding=12)
+        tabs.add(tab, text="Plik audio")
+        ttk.Label(tab, text="Odtwarzanie pliku przez wybrane wyjście").pack(anchor="w", pady=(0, 8))
+        row = ttk.Frame(tab)
+        row.pack(fill="x")
+        ttk.Entry(row, textvariable=self.audio_path).pack(side="left", fill="x", expand=True)
+        ttk.Button(row, text="Wybierz", command=self._choose_audio).pack(side="left", padx=(8, 0))
+        ttk.Button(tab, text="Odtwórz", command=self.play_audio).pack(anchor="e", pady=(12, 0))
+
+    def _choose_text(self) -> None:
+        path = filedialog.askopenfilename(filetypes=[("Plik tekstowy", "*.txt"), ("Wszystkie", "*.*")])
+        if path:
+            self.text_path.set(path)
+            self.text_source.set("file")
+
+    def _choose_audio(self) -> None:
+        path = filedialog.askopenfilename(filetypes=[("Pliki audio", "*.wav *.flac *.ogg *.mp3"), ("Wszystkie", "*.*")])
+        if path:
+            self.audio_path.set(path)
+
+    def send_text(self) -> None:
+        try:
+            config = self.fsk.config()
+            text = (
+                Path(self.text_path.get()).read_text(encoding="utf-8")
+                if self.text_source.get() == "file" else self.text_input.get("1.0", "end-1c")
+            )
+            bits = encode_text(text)
+            device = self.output.selected()
+            seconds = estimated_seconds(text, config)
+            self.player.play_chunks(fsk_chunks(bits, config, self.level.get() / 100), device)
+            self.status.set(f"Wysyłanie FSK: {len(text.encode('utf-8'))} bajtów, około {seconds:.1f} s.")
+        except (OSError, ValueError) as exc:
+            messagebox.showerror("Nie można wysłać", str(exc))
+
+    def start_tone(self) -> None:
+        try:
+            device = self.output.selected()
+            hz = self.tone_hz.get()
+            self._update_generator()
+            self.player.play_chunks(
+                live_tone_chunks(lambda: (self.live_hz, self.live_level)), device
+            )
+            self.status.set(f"Generator: {hz} Hz. Zatrzymaj przyciskiem poniżej.")
+        except ValueError as exc:
+            messagebox.showerror("Nie można uruchomić generatora", str(exc))
+
+    def _update_generator(self, *_args) -> None:
+        self.live_hz = self.tone_hz.get()
+        self.live_level = self.level.get() / 100
+
+    def play_audio(self) -> None:
+        try:
+            self.player.play_file(self.audio_path.get(), self.output.selected(), self.level.get() / 100)
+            self.status.set(f"Odtwarzanie: {Path(self.audio_path.get()).name}")
+        except ValueError as exc:
+            messagebox.showerror("Nie można odtworzyć", str(exc))
+
+    def stop(self) -> None:
+        self.player.stop()
+        self.status.set("Zatrzymano.")
+
+    def _poll(self) -> None:
+        try:
+            while True:
+                kind, message = self.player.events.get_nowait()
+                self.status.set(message)
+                if kind == "error":
+                    messagebox.showerror("Błąd audio", message)
+        except Empty:
+            pass
+        self.after(100, self._poll)
+
+    def _close(self) -> None:
+        self.player.stop()
+        self.destroy()
+
+
+if __name__ == "__main__":
+    Transmitter().mainloop()
