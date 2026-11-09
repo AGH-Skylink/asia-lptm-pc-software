@@ -8,7 +8,7 @@ from tkinter import ttk
 import sounddevice as sd
 
 from audio_runtime import devices
-from modem import ModemConfig
+from modem import MAX_FREQUENCY, ModemConfig
 
 
 class DevicePicker(ttk.Frame):
@@ -51,12 +51,12 @@ class FSKFields(ttk.LabelFrame):
         self.zero = tk.StringVar(value="1200")
         self.one = tk.StringVar(value="2200")
         self.baud = tk.StringVar(value="25")
-        self.max_hz = tk.IntVar(value=20_000)
+        self.max_hz = tk.IntVar(value=MAX_FREQUENCY)
 
         fields = (
             ("Bit 0 [Hz]", self.zero),
             ("Bit 1 [Hz]", self.one),
-            ("Szybkość [bit/s]", self.baud),
+            ("Szybkość [bit/s, maks. 10000]", self.baud),
         )
         for column, (label, variable) in enumerate(fields):
             ttk.Label(self, text=label).grid(row=0, column=column, sticky="w", padx=8, pady=(8, 0))
@@ -64,11 +64,11 @@ class FSKFields(ttk.LabelFrame):
                 row=1, column=column, sticky="ew", padx=8, pady=(0, 8)
             )
             self.columnconfigure(column, weight=1)
-        ttk.Label(self, text="Pasmo: 0 – górna granica [Hz]").grid(
+        ttk.Label(self, text="Pasmo: 0 – górna granica [Hz], poniżej 24 kHz").grid(
             row=2, column=0, columnspan=3, sticky="w", padx=8
         )
         tk.Scale(
-            self, from_=0, to=20_000, resolution=100, orient="horizontal",
+            self, from_=0, to=MAX_FREQUENCY, resolution=100, orient="horizontal",
             variable=self.max_hz, showvalue=True,
         ).grid(row=3, column=0, columnspan=3, sticky="ew", padx=8, pady=(0, 5))
 

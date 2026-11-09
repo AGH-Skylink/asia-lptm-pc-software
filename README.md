@@ -1,9 +1,10 @@
 # Acoustic transmitter and receiver
 
 Two desktop applications for Windows 11 and macOS. The transmitter can play
-an audio file, generate a sine wave from 0 to 20 kHz, and send text through a
+an audio file, generate a sine wave from 0 to 23.9 kHz, and send text through a
 speaker using FSK. The receiver captures microphone input, decodes text,
-displays the waveform on an oscilloscope, saves received text, and can optionally monitor
+displays a normalized waveform and a signal strength meter, measures bit error
+rate (BER) from a known test frame, saves received text, and can optionally monitor
 the microphone through a speaker.
 
 ## Run from source
@@ -24,16 +25,31 @@ applications run on one computer, select separate input and output devices.
 Set the same frequencies for bits `0` and `1` and the same bit rate in both
 windows. Start the receiver first, then click **Wyślij tekst** (Send text) in
 the transmitter. The default 1200/2200 Hz and 25 bits/s are a starting point.
+The bit rate can be set from 5 to 10,000 bits/s. At higher rates, the bit 0
+and bit 1 frequencies must be farther apart. For 10,000 bits/s, try
+3,000/17,000 Hz with a direct audio connection; actual speakers and
+microphones may not carry these frequencies or this data rate reliably.
 Reception depends on volume, microphone, distance, and ambient noise. Longer
 messages take proportionally longer to transmit. The maximum message size is
 2048 UTF-8 bytes.
 
 The level slider sets digital amplitude as a percentage. The physical output
 voltage depends on the sound card, operating system settings, and amplifier;
-displaying volts would require measurement and calibration. A 20 kHz signal
-can be generated digitally at a 48 kHz sample rate, but ordinary speakers and
-microphones may not reproduce it. For microphone monitoring, use headphones
+displaying volts would require measurement and calibration. A 23.9 kHz signal
+is just below the 24 kHz Nyquist limit of the 48 kHz sample rate; exactly
+24 kHz cannot be generated as a usable sine wave. Ordinary speakers and
+microphones may not reproduce the top of this range. For monitoring, use headphones
 or keep the level low to avoid acoustic feedback.
+
+To measure BER, start the receiver with the same FSK settings as the
+transmitter, then click **Wyślij test BER** (Send BER test) in the transmitter.
+The receiver compares the 1,024 known data bits in each recognized test frame
+with the expected pattern. It shows wrong bits, total compared bits, frame
+count, and checksum failures. The BER excludes frames whose preamble or test
+marker is too damaged to recognize; it is a BER for recognized frames, not a
+measurement of lost frames. **Wyzeruj BER** resets the counters. The signal
+meter shows peak and RMS in dBFS. The oscilloscope rescales each displayed
+block to its own peak; its gain indicator shows how much it was enlarged.
 
 An audio file is **played locally**; it is not transmitted as data for the
 receiver to reconstruct. Supported formats depend on the libsndfile library
@@ -78,5 +94,6 @@ receive the transmitter's signal.
 ```
 
 The tests check UTF-8 text reception with arbitrary audio block boundaries
-and noise, and rejection of messages with an invalid checksum. They do not
+and noise, BER for a damaged test frame, a 10,000 bit/s synthetic channel,
+and rejection of messages with an invalid checksum. They do not
 replace a test using a physical speaker and microphone.

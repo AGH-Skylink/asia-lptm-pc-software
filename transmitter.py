@@ -9,7 +9,8 @@ from tkinter import filedialog, messagebox, ttk
 
 from audio_runtime import OutputPlayer
 from gui_common import DevicePicker, FSKFields
-from modem import encode_text, estimated_seconds, fsk_chunks, live_tone_chunks
+from modem import (MAX_FREQUENCY, TEST_PAYLOAD, encode_payload, encode_text,
+                   estimated_seconds, fsk_chunks, live_tone_chunks)
 
 
 class Transmitter(tk.Tk):
@@ -71,14 +72,17 @@ class Transmitter(tk.Tk):
         self.text_input = tk.Text(tab, height=7, wrap="word")
         self.text_input.pack(fill="both", expand=True)
         self.text_input.insert("1.0", "Przykładowa wiadomość")
-        ttk.Button(tab, text="Wyślij tekst", command=self.send_text).pack(anchor="e", pady=(10, 0))
+        buttons = ttk.Frame(tab)
+        buttons.pack(anchor="e", pady=(10, 0))
+        ttk.Button(buttons, text="Wyślij test BER", command=self.send_test).pack(side="left", padx=(0, 8))
+        ttk.Button(buttons, text="Wyślij tekst", command=self.send_text).pack(side="left")
 
     def _generator_tab(self, tabs: ttk.Notebook) -> None:
         tab = ttk.Frame(tabs, padding=12)
         tabs.add(tab, text="Generator")
-        ttk.Label(tab, text="Częstotliwość sinusa: 0–20000 Hz").pack(anchor="w")
+        ttk.Label(tab, text=f"Częstotliwość sinusa: 0–{MAX_FREQUENCY} Hz").pack(anchor="w")
         tk.Scale(
-            tab, from_=0, to=20_000, resolution=10, orient="horizontal", variable=self.tone_hz,
+            tab, from_=0, to=MAX_FREQUENCY, resolution=10, orient="horizontal", variable=self.tone_hz,
         ).pack(fill="x", pady=(5, 16))
         ttk.Button(tab, text="Uruchom generator", command=self.start_tone).pack(anchor="e")
 
@@ -117,6 +121,16 @@ class Transmitter(tk.Tk):
             self.status.set(f"Wysyłanie FSK: {len(text.encode('utf-8'))} bajtów, około {seconds:.1f} s.")
         except (OSError, ValueError) as exc:
             messagebox.showerror("Nie można wysłać", str(exc))
+
+    def send_test(self) -> None:
+        try:
+            config = self.fsk.config()
+            device = self.output.selected()
+            bits = encode_payload(TEST_PAYLOAD)
+            self.player.play_chunks(fsk_chunks(bits, config, self.level.get() / 100), device)
+            self.status.set(f"Wysyłanie testu BER: {len(TEST_PAYLOAD) - 4} bajtów danych, około {len(bits) / config.baud:.1f} s.")
+        except ValueError as exc:
+            messagebox.showerror("Nie można wysłać testu", str(exc))
 
     def start_tone(self) -> None:
         try:
