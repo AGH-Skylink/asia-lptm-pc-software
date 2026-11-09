@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from array import array
+from math import pi, sqrt
 from pathlib import Path
 from queue import Empty, Full, Queue
 from threading import Event, Thread
@@ -11,6 +12,40 @@ from typing import Callable, Iterable
 import sounddevice as sd
 
 from modem import SAMPLE_RATE
+
+
+def ac_metrics(samples: array) -> tuple[float, float, float]:
+    """Return DC offset, AC peak, and AC RMS in full-scale units."""
+    if not samples:
+        return 0.0, 0.0, 0.0
+    offset = sum(samples) / len(samples)
+    peak = max(abs(sample - offset) for sample in samples)
+    rms = sqrt(sum((sample - offset) ** 2 for sample in samples) / len(samples))
+    return offset, peak, rms
+
+
+class HighPass:
+    """Stateful first-order filter for the visual signal display only."""
+
+    def __init__(self, cutoff_hz: float):
+        if cutoff_hz <= 0:
+            raise ValueError("Częstotliwość filtru musi być dodatnia.")
+        self.alpha = SAMPLE_RATE / (SAMPLE_RATE + 2 * pi * cutoff_hz)
+        self.previous_input = 0.0
+        self.previous_output = 0.0
+
+    def process(self, samples: array) -> array:
+        output = array("f")
+        previous_input = self.previous_input
+        previous_output = self.previous_output
+        for sample in samples:
+            value = self.alpha * (previous_output + sample - previous_input)
+            output.append(value)
+            previous_input = sample
+            previous_output = value
+        self.previous_input = previous_input
+        self.previous_output = previous_output
+        return output
 
 
 def devices(direction: str) -> list[tuple[int, str]]:

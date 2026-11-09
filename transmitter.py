@@ -5,12 +5,13 @@ from __future__ import annotations
 import tkinter as tk
 from pathlib import Path
 from queue import Empty
+from secrets import token_bytes
 from tkinter import filedialog, messagebox, ttk
 
 from audio_runtime import OutputPlayer
 from gui_common import DevicePicker, FSKFields
-from modem import (MAX_FREQUENCY, TEST_PAYLOAD, encode_payload, encode_text,
-                   estimated_seconds, fsk_chunks, live_tone_chunks)
+from ipc_reference import ID_BYTES, send_reference
+from modem import MAX_FREQUENCY, TEST_PAYLOAD, encode_payload, fsk_chunks, live_tone_chunks
 
 
 class Transmitter(tk.Tk):
@@ -56,7 +57,13 @@ class Transmitter(tk.Tk):
         ttk.Button(footer, text="Zatrzymaj dźwięk", command=self.stop).pack(side="right")
         ttk.Label(footer, textvariable=self.status, wraplength=620).pack(side="left", fill="x", expand=True)
         self.after(100, self._poll)
+        for shortcut in ("<Control-Return>", "<Command-Return>"):
+            self.bind_all(shortcut, self._send_text_shortcut)
         self.protocol("WM_DELETE_WINDOW", self._close)
+
+    def _send_text_shortcut(self, _event) -> str:
+        self.send_text()
+        return "break"
 
     def _text_tab(self, tabs: ttk.Notebook) -> None:
         tab = ttk.Frame(tabs, padding=10)
@@ -114,11 +121,17 @@ class Transmitter(tk.Tk):
                 Path(self.text_path.get()).read_text(encoding="utf-8")
                 if self.text_source.get() == "file" else self.text_input.get("1.0", "end-1c")
             )
-            bits = encode_text(text)
+            if not text:
+                raise ValueError("Wpisz tekst do wysłania.")
+            payload = text.encode("utf-8")
+            message_id = token_bytes(ID_BYTES)
+            bits = encode_payload(payload, message_id)
             device = self.output.selected()
-            seconds = estimated_seconds(text, config)
+            reference_sent = send_reference(message_id, payload)
+            seconds = len(bits) / config.baud
             self.player.play_chunks(fsk_chunks(bits, config, self.level.get() / 100), device)
-            self.status.set(f"Wysyłanie FSK: {len(text.encode('utf-8'))} bajtów, około {seconds:.1f} s.")
+            reference_status = "wzorzec przekazany lokalnie" if reference_sent else "bez lokalnego BER"
+            self.status.set(f"Wysyłanie FSK: {len(payload)} bajtów, około {seconds:.1f} s; {reference_status}.")
         except (OSError, ValueError) as exc:
             messagebox.showerror("Nie można wysłać", str(exc))
 
@@ -126,9 +139,13 @@ class Transmitter(tk.Tk):
         try:
             config = self.fsk.config()
             device = self.output.selected()
-            bits = encode_payload(TEST_PAYLOAD)
+            message_id = token_bytes(ID_BYTES)
+            bits = encode_payload(TEST_PAYLOAD, message_id)
+            reference_sent = send_reference(message_id, TEST_PAYLOAD)
             self.player.play_chunks(fsk_chunks(bits, config, self.level.get() / 100), device)
-            self.status.set(f"Wysyłanie testu BER: {len(TEST_PAYLOAD) - 4} bajtów danych, około {len(bits) / config.baud:.1f} s.")
+            reference_status = "wzorzec przekazany lokalnie" if reference_sent else "bez lokalnego wzorca"
+            self.status.set(f"Wysyłanie testu BER: {len(TEST_PAYLOAD) - 4} bajtów danych, "
+                            f"około {len(bits) / config.baud:.1f} s; {reference_status}.")
         except ValueError as exc:
             messagebox.showerror("Nie można wysłać testu", str(exc))
 

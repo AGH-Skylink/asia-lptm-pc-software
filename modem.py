@@ -1,8 +1,8 @@
 """Acoustic FSK modem shared by both applications.
 
-The protocol is: alternating preamble, sync word, 16-bit byte count, UTF-8
-payload, CRC-16/CCITT-FALSE. All integer fields are sent most-significant bit
-first. The sample rate is fixed so transmitter and receiver agree on timing.
+The protocol is: alternating preamble, sync word, 128 known BER probe bits,
+64-bit message ID, 16-bit byte count, payload, CRC-16/CCITT-FALSE. All integer
+fields are sent most-significant bit first. The sample rate is fixed at both ends.
 """
 
 from __future__ import annotations
@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from math import cos, pi, sin
 from typing import Callable
 
+from ipc_reference import ID_BYTES
+
 
 SAMPLE_RATE = 48_000
 MAX_FREQUENCY = 23_900  # 24 kHz is the Nyquist limit, not a usable tone.
@@ -21,6 +23,8 @@ PREAMBLE = tuple([1, 0] * 16)
 SYNC = tuple((0xDDAA96F3 >> shift) & 1 for shift in range(31, -1, -1))
 HEADER = PREAMBLE + SYNC
 TEST_PAYLOAD = b"BER1" + bytes((index * 73 + 19) % 256 for index in range(128))
+PROBE_BYTES = bytes((index * 97 + 43) % 256 for index in range(16))
+PROBE = tuple((byte >> shift) & 1 for byte in PROBE_BYTES for shift in range(7, -1, -1))
 
 
 @dataclass(frozen=True)
@@ -73,23 +77,29 @@ def crc16(data: bytes) -> int:
     return crc
 
 
-def encode_text(text: str) -> list[int]:
+def encode_text(text: str, message_id: bytes | None = None) -> list[int]:
     payload = text.encode("utf-8")
     if not payload:
         raise ValueError("Wpisz tekst do wysłania.")
     if len(payload) > MAX_TEXT_BYTES:
         raise ValueError(f"Tekst może mieć najwyżej {MAX_TEXT_BYTES} bajtów UTF-8.")
-    return encode_payload(payload)
+    return encode_payload(payload, message_id)
 
 
-def encode_payload(payload: bytes) -> list[int]:
+def encode_payload(payload: bytes, message_id: bytes | None = None) -> list[int]:
     if not 1 <= len(payload) <= MAX_TEXT_BYTES:
         raise ValueError(f"Dane muszą mieć 1–{MAX_TEXT_BYTES} bajtów.")
+    message_id = message_id if message_id is not None else bytes(ID_BYTES)
+    if len(message_id) != ID_BYTES:
+        raise ValueError("Identyfikator ramki musi mieć 8 bajtów.")
     frame = list(HEADER)
+    frame += PROBE
+    for byte in message_id:
+        frame += _bits(byte, 8)
     frame += _bits(len(payload), 16)
     for byte in payload:
         frame += _bits(byte, 8)
-    frame += _bits(crc16(payload), 16)
+    frame += _bits(crc16(message_id + payload), 16)
     return frame
 
 
@@ -164,8 +174,11 @@ def _goertzel(samples: array, hz: int) -> float:
 
 @dataclass(frozen=True)
 class DecodedFrame:
+    message_id: bytes
     payload: bytes
     crc_ok: bool
+    probe_errors: int
+    probe_bits: int
 
 
 def compare_test_bits(payload: bytes) -> tuple[int, int] | None:
@@ -179,11 +192,18 @@ def compare_test_bits(payload: bytes) -> tuple[int, int] | None:
     return errors, (len(TEST_PAYLOAD) - 4) * 8
 
 
+def compare_payload_bits(received: bytes, expected: bytes) -> tuple[int, int]:
+    """Count wrong or missing bits against the local expected message."""
+    errors = sum((left ^ right).bit_count() for left, right in zip(received, expected))
+    errors += 8 * abs(len(received) - len(expected))
+    return errors, 8 * max(len(received), len(expected))
+
+
 class _BitParser:
     def __init__(self):
         self.recent = deque(maxlen=len(HEADER))
         self.pending: list[int] | None = None
-        self.expected = 16
+        self.expected = len(PROBE) + ID_BYTES * 8 + 16
 
     def push(self, bit: int) -> DecodedFrame | None:
         if self.pending is None:
@@ -194,24 +214,31 @@ class _BitParser:
                 sync_errors = sum(a != b for a, b in zip(candidate[32:], SYNC))
                 if preamble_errors <= 4 and sync_errors <= 1:
                     self.pending = []
-                    self.expected = 16
+                    self.expected = len(PROBE) + ID_BYTES * 8 + 16
                     self.recent.clear()
             return None
 
         self.pending.append(bit)
-        if len(self.pending) == 16:
-            length = _number(self.pending)
+        length_start = len(PROBE) + ID_BYTES * 8
+        if len(self.pending) == length_start + 16:
+            length = _number(self.pending[length_start:length_start + 16])
             if not 1 <= length <= MAX_TEXT_BYTES:
                 self.pending = None
                 return None
-            self.expected = 16 + (length + 2) * 8
+            self.expected = length_start + 16 + (length + 2) * 8
         if len(self.pending) < self.expected:
             return None
-        length = _number(self.pending[:16])
-        payload = bytes(_number(self.pending[16 + index * 8:24 + index * 8]) for index in range(length))
+        probe_errors = sum(a != b for a, b in zip(self.pending[:len(PROBE)], PROBE))
+        message_id = bytes(_number(self.pending[len(PROBE) + index * 8:len(PROBE) + (index + 1) * 8])
+                           for index in range(ID_BYTES))
+        length = _number(self.pending[length_start:length_start + 16])
+        data_start = length_start + 16
+        payload = bytes(_number(self.pending[data_start + index * 8:data_start + (index + 1) * 8])
+                        for index in range(length))
         checksum = _number(self.pending[-16:])
         self.pending = None
-        return DecodedFrame(payload, crc16(payload) == checksum)
+        return DecodedFrame(message_id, payload, crc16(message_id + payload) == checksum,
+                            probe_errors, len(PROBE))
 
 
 class FSKDecoder:
@@ -233,6 +260,7 @@ class FSKDecoder:
         self.next_start = offsets.copy()
         self.parsers = [_BitParser() for _ in offsets]
         self.candidates: list[tuple[int, DecodedFrame]] = []
+        self.last_frames: deque[tuple[bytes, int]] = deque(maxlen=16)
 
     def feed(self, pcm: bytes) -> list[str]:
         return [frame.payload.decode("utf-8") for frame in self.feed_frames(pcm)
@@ -268,10 +296,13 @@ class FSKDecoder:
             for candidate in ready:
                 (group if abs(candidate[0] - frame_end) < 2 * self.symbol else remaining).append(candidate)
             ready = remaining
-            best = max(group, key=lambda item: (item[1].crc_ok, -sum(
+            best = max(group, key=lambda item: (item[1].crc_ok, -item[1].probe_errors, -sum(
                 (a ^ b).bit_count() for a, b in zip(item[1].payload, TEST_PAYLOAD)
             ) if len(item[1].payload) == len(TEST_PAYLOAD) else 0))
-            found.append(best[1])
+            if not any(old_payload == best[1].payload and abs(best[0] - old_end) < 2 * self.symbol
+                       for old_payload, old_end in self.last_frames):
+                self.last_frames.append((best[1].payload, best[0]))
+                found.append(best[1])
         keep_from = min(self.next_start)
         discard = keep_from - self.base
         if discard > 0:

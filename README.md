@@ -4,7 +4,7 @@ Two desktop applications for Windows 11 and macOS. The transmitter can play
 an audio file, generate a sine wave from 0 to 23.9 kHz, and send text through a
 speaker using FSK. The receiver captures microphone input, decodes text,
 displays a normalized waveform and a signal strength meter, measures bit error
-rate (BER) from a known test frame, saves received text, and can optionally monitor
+rate (BER) on every FSK frame, saves received text, and can optionally monitor
 the microphone through a speaker.
 
 ## Run from source
@@ -41,15 +41,28 @@ is just below the 24 kHz Nyquist limit of the 48 kHz sample rate; exactly
 microphones may not reproduce the top of this range. For monitoring, use headphones
 or keep the level low to avoid acoustic feedback.
 
-To measure BER, start the receiver with the same FSK settings as the
-transmitter, then click **Wyślij test BER** (Send BER test) in the transmitter.
-The receiver compares the 1,024 known data bits in each recognized test frame
-with the expected pattern. It shows wrong bits, total compared bits, frame
-count, and checksum failures. The BER excludes frames whose preamble or test
-marker is too damaged to recognize; it is a BER for recognized frames, not a
-measurement of lost frames. **Wyzeruj BER** resets the counters. The signal
-meter shows peak and RMS in dBFS. The oscilloscope rescales each displayed
-block to its own peak; its gain indicator shows how much it was enlarged.
+When both applications run on the same computer, the transmitter sends the
+expected message bytes to the receiver over a local-only connection at
+`127.0.0.1:51526` before playing the acoustic frame. The acoustic frame carries
+a short message ID so the receiver can match it with that reference. The
+receiver shows the locally reported data separately from the audio result and
+calculates **BER danych** from the actual received payload bits, even when its
+CRC fails. This local connection does not carry the acoustic transmission.
+If the receiver is not running or the local connection is unavailable, the
+transmitter still sends audio, but payload BER is unavailable.
+
+Every FSK frame also contains a 128-bit known probe for **BER wzorca**. The
+receiver measures this on each recognized frame, including when there is no
+local reference. **Wyślij test BER** adds 1,024 known data bits to the probe
+measurement. Lost frames whose preamble or length is too damaged to recognize
+are excluded. **Wyzeruj BER** resets the counters. Starting a new local send
+clears the previous received text immediately; any newly decoded frame also
+replaces it. If CRC fails, the received-text box remains empty. Both
+applications must use the same protocol version. The signal
+meter shows AC peak and RMS in dBFS after removal of DC offset and slow drift.
+The scope filters out frequencies well below the configured FSK tones, hides
+background noise, and normalizes blocks whose filtered level exceeds its noise
+gate. The filter affects only the display and meter, not demodulation.
 
 An audio file is **played locally**; it is not transmitted as data for the
 receiver to reconstruct. Supported formats depend on the libsndfile library
@@ -94,6 +107,6 @@ receive the transmitter's signal.
 ```
 
 The tests check UTF-8 text reception with arbitrary audio block boundaries
-and noise, BER for a damaged test frame, a 10,000 bit/s synthetic channel,
+and noise, BER for ordinary and damaged test frames, a 10,000 bit/s synthetic channel,
 and rejection of messages with an invalid checksum. They do not
 replace a test using a physical speaker and microphone.
