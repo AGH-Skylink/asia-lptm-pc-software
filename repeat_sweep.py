@@ -5,11 +5,13 @@ from __future__ import annotations
 import argparse
 import csv
 from collections import defaultdict
+from hashlib import sha256
+import json
 from math import log10
 import os
 from pathlib import Path
 
-from sweep import (_run_gui_trial, _select_device, make_plots, plan)
+from sweep import (MESSAGE, _run_gui_trial, _select_device, make_plots, plan)
 
 
 RAW_COLUMNS = (
@@ -44,14 +46,16 @@ def aggregate(trials, attempts: list[dict]) -> tuple[list[dict], list[dict]]:
     for trial in trials:
         rows = grouped[trial.key]
         comparable = [row for row in rows if row["compared_bits"] != ""]
-        bits = sum(int(row["compared_bits"]) for row in comparable)
-        errors = sum(int(row["bit_errors"]) for row in comparable)
+        # A missing frame is scored as a 100% failure for the summary. The raw
+        # log keeps its BER empty so frame loss stays distinguishable from bits.
+        scored_ber = [100.0 if row["status"] == "no_frame" else float(row["ber_percent"])
+                      for row in rows]
         rms_powers = [10 ** (float(row["signal_rms_dbfs"]) / 10)
                       for row in rows if row["signal_rms_dbfs"] != ""]
         rms_dbfs = 10 * log10(sum(rms_powers) / len(rms_powers)) if rms_powers else ""
         identity = {"bit_0_hz": trial.zero_hz, "bit_1_hz": trial.one_hz,
                     "speed_bps": f"{trial.speed_bps:g}"}
-        summary.append({**identity, "ber_percent": 100 * errors / bits if bits else "",
+        summary.append({**identity, "ber_percent": sum(scored_ber) / len(scored_ber) if scored_ber else "",
                         "signal_rms_dbfs": rms_dbfs})
         coverage.append({**identity, "transmissions": len(rows),
                          "recognized_frames": sum(row["status"] != "no_frame" for row in rows),
@@ -91,12 +95,22 @@ def main() -> None:
     parser.add_argument("--output-device", type=int, help="Wyjście USB (domyślnie wykrywane).")
     parser.add_argument("--amplitude", type=float, default=0.4, help="Amplituda 0–1, domyślnie 0,4.")
     parser.add_argument("--transmissions", type=int, default=1, help="Nadań na kombinację, domyślnie 1.")
+    parser.add_argument("--message-file", type=Path,
+                        help="Plik UTF-8 z wiadomością wysyłaną w każdym nadaniu.")
     parser.add_argument("--only", action="append", metavar="ZERO,ONE,BPS", help="Ogranicz próbę do wybranego ustawienia.")
     parser.add_argument("--output", type=Path, default=Path("measurements/ber_1x_raw.csv"),
                         help="CSV pojedynczych nadań; tabela 5 kolumn powstanie obok.")
     parser.add_argument("--resume", action="store_true", help="Kontynuuj istniejący dziennik nadań.")
     parser.add_argument("--dry-run", action="store_true", help="Pokaż liczbę planowanych nadań bez audio.")
     args = parser.parse_args()
+    try:
+        message = args.message_file.read_text(encoding="utf-8") if args.message_file else MESSAGE
+    except (OSError, UnicodeError) as exc:
+        parser.error(f"Nie można odczytać wiadomości UTF-8: {exc}")
+    if not message:
+        parser.error("Wiadomość testowa nie może być pusta.")
+    message_bytes = message.encode("utf-8")
+    message_hash = sha256(message_bytes).hexdigest()
     try:
         trials = _selected_trials(args.only)
     except ValueError as exc:
@@ -105,7 +119,7 @@ def main() -> None:
         parser.error("Amplituda musi być w (0,1], a liczba nadań dodatnia.")
     if args.dry_run:
         print(f"Kombinacje: {len(trials)}; nadań na kombinację: {args.transmissions}; "
-              f"łącznie: {len(trials) * args.transmissions}")
+              f"łącznie: {len(trials) * args.transmissions}; wiadomość: {len(message_bytes)} bajtów")
         return
     if args.output.exists() and not args.resume:
         parser.error("Dziennik już istnieje; użyj --resume albo nowej ścieżki.")
@@ -119,7 +133,21 @@ def main() -> None:
             parser.error("Istniejący dziennik ma inny poziom lub inne urządzenia audio.")
     summary_path = args.output.with_name(args.output.stem.replace("_raw", "") + "_summary.csv")
     coverage_path = args.output.with_name(args.output.stem.replace("_raw", "") + "_coverage.csv")
+    metadata_path = args.output.with_name(args.output.stem.replace("_raw", "") + "_metadata.json")
     args.output.parent.mkdir(parents=True, exist_ok=True)
+    metadata = {"message": message, "message_bytes": len(message_bytes),
+                "message_sha256": message_hash, "amplitude": args.amplitude,
+                "input_device": input_device, "output_device": output_device,
+                "settings": len(trials)}
+    if args.resume:
+        if not metadata_path.exists():
+            parser.error("Brak metadanych wiadomości dla tego dziennika; nie można bezpiecznie wznowić.")
+        stored = json.loads(metadata_path.read_text(encoding="utf-8"))
+        if any(stored.get(key) != value for key, value in metadata.items()):
+            parser.error("Wiadomość lub ustawienia nie zgadzają się z istniejącym dziennikiem.")
+    else:
+        metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n",
+                                 encoding="utf-8")
     if not args.output.exists():
         _write_csv(args.output, RAW_COLUMNS, [])
     grouped = defaultdict(list)
@@ -133,7 +161,7 @@ def main() -> None:
             attempt_number = len(grouped[trial.key]) + 1
             print(f"[{count}/{planned_remaining}] 0={trial.zero_hz} Hz, 1={trial.one_hz} Hz, "
                   f"{trial.speed_bps:g} bit/s, nadanie {attempt_number}/{args.transmissions}", flush=True)
-            result = _run_gui_trial(trial, input_device, output_device, args.amplitude)
+            result = _run_gui_trial(trial, input_device, output_device, args.amplitude, message)
             result["received_text"] = "".join(
                 f"\\u{ord(character):04x}" if ord(character) < 32
                 else character for character in result["received_text"])
@@ -151,10 +179,11 @@ def main() -> None:
     summary, coverage = aggregate(trials, attempts)
     _write_csv(summary_path, SUMMARY_COLUMNS, summary)
     _write_csv(coverage_path, COVERAGE_COLUMNS, coverage)
-    plots = make_plots(summary_path)
+    plots = make_plots(summary_path, f"{len(message_bytes)} B, nadajnik {100 * args.amplitude:g}%")
     print("Dziennik:", args.output)
     print("Tabela 5 kolumn:", summary_path)
     print("Liczba rozpoznanych ramek:", coverage_path)
+    print("Metadane wiadomości:", metadata_path)
     print("Wykresy:", *plots, sep="\n  ")
 
 

@@ -146,10 +146,10 @@ normalized height of the oscilloscope trace or a voltage measurement. Higher
 output level can improve a weak signal, but it does not guarantee successful
 decoding. `--headless` runs the same modem and audio path without the windows.
 
-The final one-transmission study is in `measurements/ber_1x_summary.csv` and
-its two plots. It used the two USB audio cards on the test Mac at 40% output.
-The raw log and frame counts are kept alongside the summary. Earlier sweep
-and amplitude checks were exploratory and are not part of this final study.
+The 41-byte one-transmission study is in `measurements/ber_1x_summary.csv` and
+its two plots. It used the USB audio input and output on the test Mac at 40%
+output. The raw log and frame counts are kept alongside the summary. Earlier
+sweep and amplitude checks were exploratory.
 
 ### One fresh transmission per setting
 
@@ -164,22 +164,50 @@ output. Every transmission, including `no_frame`, is appended to
 `measurements/ber_1x_raw.csv`. The script updates
 `measurements/ber_1x_summary.csv` with **exactly five columns**:
 `bit_0_hz`, `bit_1_hz`, `speed_bps`, `ber_percent`, and `signal_rms_dbfs`.
-BER is calculated from the total wrong payload bits divided by the total
-compared bits across recognized frames. With the default single transmission,
-this is the BER of that one frame. It is blank for `no_frame`. Received signal
-strength is the measured RMS level in dBFS. A separate
+For a recognized frame, BER is calculated from wrong payload bits divided by
+compared bits. A `no_frame` transmission is assigned **100% in the summary and
+plots** as a frame-loss penalty. This is a scoring convention, not a measured
+bit error rate; its BER remains blank in the raw log. A setting with no
+transmission yet stays blank in the summary. With multiple transmissions per
+setting, the summary averages their BER scores. Received signal strength is
+the measured RMS level in dBFS. A separate
 `measurements/ber_1x_coverage.csv` reports the number of transmitted,
 recognized, and comparable frames per setting. The two charts are generated
 from the five-column summary. Use `--resume` to continue an interrupted run;
 the script does not repeat already logged transmissions. For a later repeated
 study, set `--transmissions 10` and use a different `--output` name; its
-five-column table pools BER across recognized frames and averages received
-signal power across all attempts.
+five-column table averages BER scores and received signal power across all
+attempts. Each chart uses a separate panel for each bit-0 frequency and labels
+every plotted point with its bit-1 frequency in hertz.
 
 In the recorded `1x` run, 28 of 50 transmissions produced a recognizable
-frame and 22 were `no_frame`. The BER column is blank for those 22 settings;
+frame and 22 were `no_frame`. The summary scores those 22 settings as 100% BER;
 the signal level is present for all 50. The fixed text contains 41 UTF-8 bytes
 (328 payload bits), before protocol overhead.
+
+### 128-byte message scan
+
+`measurements/test_message_128B.txt` contains exactly 128 UTF-8 bytes. To send
+it once for each setting at the same 40% output level, run:
+
+```sh
+.venv/bin/python repeat_sweep.py --output-device 0 --input-device 1 \
+  --message-file measurements/test_message_128B.txt \
+  --output measurements/ber_128B_1x_raw.csv
+```
+
+This creates `ber_128B_1x_summary.csv` with the same five columns as the 41-byte
+scan, plus a raw log, frame-count CSV, two plots, and a metadata JSON file. The
+metadata records the exact message, its byte length and SHA-256 hash, amplitude,
+and device IDs. Resume with the same arguments and `--resume` after an
+interruption; the script checks the metadata before sending more audio.
+
+The recorded `128B` study completed one transmission for each of 50 settings.
+The receiver recognized 27 frames; the 23 `no_frame` settings score 100% BER in
+the summary and plots while their raw BER fields stay blank.
+Received signal level is recorded for all 50 settings. A temporary USB audio
+stream error interrupted the run after 31 settings; the applications were
+restarted and the remaining 19 settings were measured from the saved log.
 
 ## Test the protocol
 

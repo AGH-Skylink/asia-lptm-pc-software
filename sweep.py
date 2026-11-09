@@ -218,7 +218,7 @@ def _gui_command(port: int, command: dict) -> dict:
 
 
 def _run_gui_trial(trial: Trial, input_device: int, output_device: int,
-                   amplitude: float) -> dict:
+                   amplitude: float, message: str = MESSAGE) -> dict:
     settings = {"zero_hz": trial.zero_hz, "one_hz": trial.one_hz,
                 "speed_bps": trial.speed_bps}
     _gui_command(RECEIVER_PORT, {"action": "prepare", **settings,
@@ -227,7 +227,7 @@ def _run_gui_trial(trial: Trial, input_device: int, output_device: int,
     _gui_command(RECEIVER_PORT, {"action": "begin"})
     sent = _gui_command(TRANSMITTER_PORT, {"action": "send", **settings,
                                            "output_device": output_device,
-                                           "amplitude": amplitude, "text": MESSAGE})
+                                           "amplitude": amplitude, "text": message})
     if not sent["reference_sent"]:
         raise RuntimeError("Nadajnik nie przekazał lokalnego wzorca do Odbiornika.")
     deadline = monotonic() + sent["seconds"] + 6
@@ -294,7 +294,7 @@ def _pending_trials(trials: list[Trial], rows: dict, retry_status: set[str] | No
             or rows[trial.key]["status"] == "no_frame"]
 
 
-def make_plots(csv_path: Path) -> tuple[Path, Path]:
+def make_plots(csv_path: Path, description: str = "") -> tuple[Path, Path]:
     cache = Path(gettempdir()) / "sound_matplotlib_cache"
     cache.mkdir(parents=True, exist_ok=True)
     os.environ.setdefault("MPLCONFIGDIR", str(cache))
@@ -309,46 +309,59 @@ def make_plots(csv_path: Path) -> tuple[Path, Path]:
     level = (f" (poziom nadajnika {100 * float(next(iter(amplitudes))):g}%)"
              if len(amplitudes) == 1 else "")
     outputs = []
+    zeros = sorted({int(row["bit_0_hz"]) for row in rows})
+    columns = min(3, len(zeros))
+    rows_count = (len(zeros) + columns - 1) // columns
     for column, ylabel, suffix in (
-        ("ber_percent", "BER danych [%]", "ber_vs_bps.png"),
+        ("ber_percent", "BER [%]", "ber_vs_bps.png"),
         ("signal_rms_dbfs", "Siła sygnału, RMS [dBFS]", "signal_vs_bps.png"),
     ):
-        if column == "ber_percent" and any(row[column] for row in rows):
-            figure, (overview, detail) = plt.subplots(
-                2, 1, sharex=True, figsize=(10, 7.5), layout="constrained")
-            axes = (overview, detail)
-        else:
-            figure, axis = plt.subplots(figsize=(10, 5.5), layout="constrained")
-            axes = (axis,)
-        zeros = sorted({int(row["bit_0_hz"]) for row in rows})
-        colors = plt.cm.viridis([index / max(1, len(zeros) - 1) for index in range(len(zeros))])
-        for zero, color in zip(zeros, colors):
+        figure, grid = plt.subplots(rows_count, columns, squeeze=False,
+                                   figsize=(6 * columns, 4.6 * rows_count),
+                                   layout="constrained")
+        for panel, zero in enumerate(zeros):
+            axis = grid.flat[panel]
             selected = [row for row in rows if int(row["bit_0_hz"]) == zero and row[column] != ""]
-            if selected:
-                for axis in axes:
-                    axis.scatter([float(row["speed_bps"]) for row in selected],
-                                 [float(row[column]) for row in selected],
-                                 label=f"bit 0 = {zero} Hz", color=color, s=40, alpha=0.85)
-        for axis in axes:
+            positions = {}
+            for row in selected:
+                key = (float(row["speed_bps"]), float(row[column]))
+                positions.setdefault(key, []).append(row)
+            for index, ((speed, value), samples) in enumerate(sorted(positions.items())):
+                missing_frame = any(sample.get("ber_percent") != ""
+                                    and float(sample["ber_percent"]) == 100 for sample in samples)
+                color = "#b22222" if missing_frame else "#216a93"
+                axis.scatter(speed, value, color=color, marker="x" if missing_frame else "o",
+                             s=55 + 20 * (len(samples) - 1), zorder=3)
+                label = " / ".join(str(sample["bit_1_hz"]) for sample in samples)
+                dx, dy = ((5, 7), (5, -9), (-5, 7), (-5, -9), (5, 13), (-5, -15))[index % 6]
+                if column == "ber_percent" and value <= 5:
+                    dx, dy = (5 if index % 3 else -5), (7 if index % 2 else 16)
+                axis.annotate(label, (speed, value), xytext=(dx, dy),
+                              textcoords="offset points", fontsize=8,
+                              ha="left" if dx > 0 else "right",
+                              va="bottom" if dy > 0 else "top", color=color)
             axis.set_xscale("log")
             axis.set_ylabel(ylabel)
+            axis.set_xlabel("Szybkość [bit/s]")
+            axis.set_title(f"bit 0 = {zero} Hz", fontsize=11)
             axis.grid(True, which="both", alpha=0.25)
-        axes[-1].set_xlabel("Szybkość transmisji [bit/s]")
-        figure.suptitle(f"{ylabel} względem szybkości transmisji{level}")
-        handles, labels = axes[0].get_legend_handles_labels()
-        if handles:
-            axes[0].legend(ncol=3, fontsize=8)
-        if column == "ber_percent":
-            missing = sum(row[column] == "" for row in rows)
-            axes[0].text(0.99, 0.02, f"Bez wyniku BER: {missing}/{len(rows)}",
-                         transform=axes[0].transAxes, ha="right", va="bottom", fontsize=9)
-            if len(axes) == 2:
-                axes[0].set_ylim(-2, 100)
-                axes[1].set_ylim(-0.25, 10)
-                axes[1].set_title("Powiększenie: BER 0–10%", fontsize=10)
-            else:
-                axes[0].text(0.5, 0.5, "Brak rozpoznanej ramki — BER nieokreślony",
-                             transform=axes[0].transAxes, ha="center", va="center")
+            speeds = [float(row["speed_bps"]) for row in rows if int(row["bit_0_hz"]) == zero]
+            axis.set_xlim(min(speeds) * 0.78, max(speeds) * 1.3)
+            if column == "ber_percent":
+                axis.set_ylim(-5, 115)
+            elif selected:
+                levels = [float(row[column]) for row in selected]
+                padding = max(0.8, (max(levels) - min(levels)) * 0.22)
+                axis.set_ylim(min(levels) - padding, max(levels) + padding)
+        for panel in range(len(zeros), rows_count * columns):
+            grid.flat[panel].set_visible(False)
+        detail = f" — {description}" if description else level
+        frame_loss_score = any(row.get("ber_percent") != ""
+                               and float(row["ber_percent"]) == 100 for row in rows)
+        note = "Liczba przy punkcie = bit 1 [Hz]."
+        if frame_loss_score:
+            note += " Czerwony × = brak ramki (BER 100%)."
+        figure.suptitle(f"{ylabel} od szybkości transmisji{detail}\n{note}", fontsize=14)
         target = csv_path.with_name(f"{csv_path.stem}_{suffix}")
         figure.savefig(target, dpi=160)
         plt.close(figure)

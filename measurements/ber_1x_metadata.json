@@ -1,0 +1,9 @@
+{
+  "message": "Laser Polarisation Modulation Transceiver",
+  "message_bytes": 41,
+  "message_sha256": "f1e9477d9e28a6dcbb0ca3d208c3bda7f5b70b374c4ae4a47c43fedabbc87717",
+  "amplitude": 0.4,
+  "input_device": 1,
+  "output_device": 0,
+  "settings": 50
+}
