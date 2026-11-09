@@ -10,6 +10,7 @@ from tkinter import filedialog, messagebox, ttk
 
 from audio_runtime import OutputPlayer
 from gui_common import DevicePicker, FSKFields
+from ipc_control import CommandServer, TRANSMITTER_PORT
 from ipc_reference import ID_BYTES, send_reference
 from modem import MAX_FREQUENCY, TEST_PAYLOAD, encode_payload, fsk_chunks, live_tone_chunks
 
@@ -21,6 +22,9 @@ class Transmitter(tk.Tk):
         self.geometry("820x680")
         self.minsize(690, 560)
         self.player = OutputPlayer()
+        self.control = CommandServer(TRANSMITTER_PORT)
+        self.sweep_mode = False
+        self.last_audio_error: str | None = None
         self.level = tk.IntVar(value=40)
         self.status = tk.StringVar(value="Gotowy.")
         self.text_source = tk.StringVar(value="field")
@@ -57,6 +61,10 @@ class Transmitter(tk.Tk):
         ttk.Button(footer, text="Zatrzymaj dźwięk", command=self.stop).pack(side="right")
         ttk.Label(footer, textvariable=self.status, wraplength=620).pack(side="left", fill="x", expand=True)
         self.after(100, self._poll)
+        try:
+            self.control.start()
+        except OSError as exc:
+            self.status.set(f"Sterowanie pomiarami niedostępne: {exc}")
         for shortcut in ("<Control-Return>", "<Command-Return>"):
             self.bind_all(shortcut, self._send_text_shortcut)
         self.protocol("WM_DELETE_WINDOW", self._close)
@@ -115,6 +123,7 @@ class Transmitter(tk.Tk):
             self.audio_path.set(path)
 
     def send_text(self) -> None:
+        self.sweep_mode = False
         try:
             config = self.fsk.config()
             text = (
@@ -123,19 +132,53 @@ class Transmitter(tk.Tk):
             )
             if not text:
                 raise ValueError("Wpisz tekst do wysłania.")
-            payload = text.encode("utf-8")
-            message_id = token_bytes(ID_BYTES)
-            bits = encode_payload(payload, message_id)
-            device = self.output.selected()
-            reference_sent = send_reference(message_id, payload)
-            seconds = len(bits) / config.baud
-            self.player.play_chunks(fsk_chunks(bits, config, self.level.get() / 100), device)
-            reference_status = "wzorzec przekazany lokalnie" if reference_sent else "bez lokalnego BER"
-            self.status.set(f"Wysyłanie FSK: {len(payload)} bajtów, około {seconds:.1f} s; {reference_status}.")
+            self._transmit_text(text, config, self.output.selected(), self.level.get() / 100)
         except (OSError, ValueError) as exc:
             messagebox.showerror("Nie można wysłać", str(exc))
 
+    def _transmit_text(self, text: str, config, device: int, amplitude: float) -> dict:
+        payload = text.encode("utf-8")
+        message_id = token_bytes(ID_BYTES)
+        bits = encode_payload(payload, message_id)
+        reference_sent = send_reference(message_id, payload)
+        seconds = len(bits) / config.baud
+        self.player.play_chunks(fsk_chunks(bits, config, amplitude), device)
+        reference_status = "wzorzec przekazany lokalnie" if reference_sent else "bez lokalnego BER"
+        self.status.set(f"Wysyłanie FSK: {len(payload)} bajtów, około {seconds:.1f} s; {reference_status}.")
+        return {"message_id": message_id.hex(), "reference_sent": reference_sent,
+                "seconds": seconds}
+
+    def _control_command(self, command: dict) -> dict:
+        action = command.get("action")
+        if action == "send":
+            zero = int(command["zero_hz"])
+            one = int(command["one_hz"])
+            baud = float(command["speed_bps"])
+            device = int(command["output_device"])
+            amplitude = float(command["amplitude"])
+            text = str(command["text"])
+            if not 0 < amplitude <= 1:
+                raise ValueError("Amplituda musi być w zakresie (0, 1].")
+            self.fsk.zero.set(str(zero))
+            self.fsk.one.set(str(one))
+            self.fsk.baud.set(f"{baud:g}")
+            self.fsk.max_hz.set(MAX_FREQUENCY)
+            config = self.fsk.config()
+            self.output.select(device)
+            self.level.set(round(amplitude * 100))
+            self.text_source.set("field")
+            self.text_input.delete("1.0", "end")
+            self.text_input.insert("1.0", text)
+            self.sweep_mode = True
+            self.last_audio_error = None
+            return self._transmit_text(text, config, device, amplitude)
+        if action == "status":
+            return {"active": self.player.active, "status": self.status.get(),
+                    "error": self.last_audio_error}
+        raise ValueError("Nieznane polecenie nadajnika.")
+
     def send_test(self) -> None:
+        self.sweep_mode = False
         try:
             config = self.fsk.config()
             device = self.output.selected()
@@ -150,6 +193,7 @@ class Transmitter(tk.Tk):
             messagebox.showerror("Nie można wysłać testu", str(exc))
 
     def start_tone(self) -> None:
+        self.sweep_mode = False
         try:
             device = self.output.selected()
             hz = self.tone_hz.get()
@@ -166,6 +210,7 @@ class Transmitter(tk.Tk):
         self.live_level = self.level.get() / 100
 
     def play_audio(self) -> None:
+        self.sweep_mode = False
         try:
             self.player.play_file(self.audio_path.get(), self.output.selected(), self.level.get() / 100)
             self.status.set(f"Odtwarzanie: {Path(self.audio_path.get()).name}")
@@ -179,16 +224,28 @@ class Transmitter(tk.Tk):
     def _poll(self) -> None:
         try:
             while True:
+                command, response = self.control.incoming.get_nowait()
+                try:
+                    response.put(self._control_command(command))
+                except Exception as exc:
+                    response.put({"error": str(exc)})
+        except Empty:
+            pass
+        try:
+            while True:
                 kind, message = self.player.events.get_nowait()
                 self.status.set(message)
                 if kind == "error":
-                    messagebox.showerror("Błąd audio", message)
+                    self.last_audio_error = message
+                    if not self.sweep_mode:
+                        messagebox.showerror("Błąd audio", message)
         except Empty:
             pass
         self.after(100, self._poll)
 
     def _close(self) -> None:
         self.player.stop()
+        self.control.stop()
         self.destroy()
 
 

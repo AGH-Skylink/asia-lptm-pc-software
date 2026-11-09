@@ -10,7 +10,7 @@ from __future__ import annotations
 from array import array
 from collections import deque
 from dataclasses import dataclass
-from math import cos, pi, sin
+from math import cos, isfinite, pi, sin
 from typing import Callable
 
 from ipc_reference import ID_BYTES
@@ -31,7 +31,7 @@ PROBE = tuple((byte >> shift) & 1 for byte in PROBE_BYTES for shift in range(7, 
 class ModemConfig:
     zero_hz: int = 1_200
     one_hz: int = 2_200
-    baud: int = 25
+    baud: float = 25
     max_hz: int = MAX_FREQUENCY
 
     def validate(self) -> None:
@@ -41,10 +41,10 @@ class ModemConfig:
             raise ValueError("Częstotliwość zera musi mieścić się w wybranym paśmie.")
         if not (100 <= self.one_hz <= self.max_hz):
             raise ValueError("Częstotliwość jedynki musi mieścić się w wybranym paśmie.")
-        if abs(self.one_hz - self.zero_hz) < 200:
-            raise ValueError("Częstotliwości 0 i 1 muszą różnić się o co najmniej 200 Hz.")
-        if not 5 <= self.baud <= 10_000:
+        if not isfinite(self.baud) or not 5 <= self.baud <= 10_000:
             raise ValueError("Szybkość musi mieścić się w zakresie 5–10000 bitów/s.")
+        if self.one_hz == self.zero_hz:
+            raise ValueError("Częstotliwości 0 i 1 muszą być różne.")
         if abs(self.one_hz - self.zero_hz) < self.baud:
             raise ValueError("Przy tej szybkości częstotliwości 0 i 1 muszą różnić się co najmniej o liczbę bitów/s.")
 
@@ -54,7 +54,7 @@ class ModemConfig:
 
     def symbol_boundary(self, index: int) -> int:
         """Rounded cumulative boundary avoids drift when samples/bit is fractional."""
-        return (index * SAMPLE_RATE + self.baud // 2) // self.baud
+        return round(index * SAMPLE_RATE / self.baud)
 
 
 def _bits(value: int, count: int) -> list[int]:

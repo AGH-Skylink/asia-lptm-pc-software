@@ -11,8 +11,9 @@ from tkinter import filedialog, messagebox, ttk
 
 from audio_runtime import HighPass, ReceiverAudio, ac_metrics
 from gui_common import DevicePicker, FSKFields
+from ipc_control import CommandServer, RECEIVER_PORT
 from ipc_reference import ReferenceServer
-from modem import FSKDecoder, compare_payload_bits, compare_test_bits
+from modem import FSKDecoder, MAX_FREQUENCY, compare_payload_bits, compare_test_bits
 
 
 class Receiver(tk.Tk):
@@ -37,7 +38,13 @@ class Receiver(tk.Tk):
         self.ber_crc_errors = 0
         self.scope_noise_floor = 0.0001
         self.reference_server = ReferenceServer()
+        self.control = CommandServer(RECEIVER_PORT)
         self.references: OrderedDict[bytes, bytes] = OrderedDict()
+        self.measurement_active = False
+        self.measurement_result: dict | None = None
+        self.measurement_sum_sq = 0.0
+        self.measurement_count = 0
+        self.measurement_noise_dbfs: float | None = None
 
         body = ttk.Frame(self, padding=14)
         body.pack(fill="both", expand=True)
@@ -97,6 +104,10 @@ class Receiver(tk.Tk):
             self.reference_server.start()
         except OSError as exc:
             self.status.set(f"Lokalny kanał wzorca niedostępny: {exc}")
+        try:
+            self.control.start()
+        except OSError as exc:
+            self.status.set(f"Sterowanie pomiarami niedostępne: {exc}")
         self.after(80, self._poll)
         for shortcut in ("<Control-r>", "<Command-r>"):
             self.bind_all(shortcut, self._toggle_receive)
@@ -128,9 +139,65 @@ class Receiver(tk.Tk):
     def stop(self) -> None:
         self.audio.stop()
         self.decoder = None
+        self.measurement_active = False
         self.start_button.configure(state="normal")
         self.stop_button.configure(state="disabled")
         self.status.set("Zatrzymano.")
+
+    def _measurement_dbfs(self) -> float | None:
+        if not self.measurement_count or self.measurement_sum_sq <= 0:
+            return None
+        return 10 * log10(self.measurement_sum_sq / self.measurement_count)
+
+    def _control_command(self, command: dict) -> dict:
+        action = command.get("action")
+        if action == "prepare":
+            zero = int(command["zero_hz"])
+            one = int(command["one_hz"])
+            baud = float(command["speed_bps"])
+            self.stop()
+            self.fsk.zero.set(str(zero))
+            self.fsk.one.set(str(one))
+            self.fsk.baud.set(f"{baud:g}")
+            self.fsk.max_hz.set(MAX_FREQUENCY)
+            self.input.select(int(command["input_device"]))
+            self.listen.set(False)
+            self.references.clear()
+            self._show_expected(None)
+            self.result.delete("1.0", "end")
+            self._reset_ber()
+            self.measurement_result = None
+            self.measurement_sum_sq = 0.0
+            self.measurement_count = 0
+            self.measurement_noise_dbfs = None
+            self.start()
+            if self.decoder is None:
+                raise RuntimeError("Odbiornik nie rozpoczął nasłuchu.")
+            self.measurement_active = True
+            self.status.set("Pomiar automatyczny: czekam na transmisję audio.")
+            return {"ready": True}
+        if action == "begin":
+            self.measurement_noise_dbfs = self._measurement_dbfs()
+            self.measurement_sum_sq = 0.0
+            self.measurement_count = 0
+            return {"noise_rms_dbfs": self.measurement_noise_dbfs}
+        if action == "status":
+            return {"active": self.measurement_active, "result": self.measurement_result,
+                    "signal_rms_dbfs": self._measurement_dbfs()}
+        if action == "finish":
+            result = self.measurement_result or {
+                "status": "no_frame", "ber_percent": "", "bit_errors": "",
+                "compared_bits": "", "crc_ok": "", "received_text": "", "message_id": "",
+            }
+            result = {**result, "signal_rms_dbfs": self._measurement_dbfs(),
+                      "noise_rms_dbfs": self.measurement_noise_dbfs}
+            self.stop()
+            if result["status"] == "no_frame":
+                self.status.set("Pomiar: nie rozpoznano ramki audio; BER niedostępny.")
+            else:
+                self.status.set(f"Pomiar zakończony: {result['status']}, BER {result['ber_percent']}%.")
+            return result
+        raise ValueError("Nieznane polecenie odbiornika.")
 
     def _reset_ber(self) -> None:
         self.ber_errors = self.ber_bits = self.ber_frames = self.ber_crc_errors = 0
@@ -204,6 +271,15 @@ class Receiver(tk.Tk):
     def _poll(self) -> None:
         try:
             while True:
+                command, response = self.control.incoming.get_nowait()
+                try:
+                    response.put(self._control_command(command))
+                except Exception as exc:
+                    response.put({"error": str(exc)})
+        except Empty:
+            pass
+        try:
+            while True:
                 message_id, expected = self.reference_server.incoming.get_nowait()
                 self.references[message_id] = expected
                 if len(self.references) > 32:
@@ -223,6 +299,9 @@ class Receiver(tk.Tk):
                 raw = array("f")
                 raw.frombytes(chunk)
                 self.latest = self.scope_filter.process(raw)
+                if self.measurement_active:
+                    self.measurement_sum_sq += sum(sample * sample for sample in self.latest)
+                    self.measurement_count += len(self.latest)
                 for frame in self.decoder.feed_frames(chunk):
                     # Each received frame replaces the previous result, including
                     # frames that fail CRC, so stale text cannot look newly received.
@@ -232,6 +311,11 @@ class Receiver(tk.Tk):
                     self.ber_frames += 1
                     self.ber_crc_errors += not frame.crc_ok
                     expected = self.references.pop(frame.message_id, None)
+                    matched_id = expected is not None
+                    # An automated trial has exactly one local reference. If
+                    # its audio ID is damaged, the payload is still comparable.
+                    if expected is None and self.measurement_active and len(self.references) == 1:
+                        _, expected = self.references.popitem(last=False)
                     if expected is not None:
                         errors, bits = compare_payload_bits(frame.payload, expected)
                         self._show_expected(expected)
@@ -241,6 +325,17 @@ class Receiver(tk.Tk):
                     else:
                         self._show_expected(None)
                         self.data_ber_label.set("BER danych: brak lokalnego wzorca dla tej ramki")
+                    if self.measurement_active and self.measurement_result is None:
+                        self.measurement_result = {
+                            "message_id": frame.message_id.hex(),
+                            "status": (("ok" if frame.crc_ok else "bad_crc") if matched_id
+                                       else "id_mismatch" if expected is not None else "no_reference"),
+                            "ber_percent": 100 * errors / bits if expected is not None else "",
+                            "bit_errors": errors if expected is not None else "",
+                            "compared_bits": bits if expected is not None else "",
+                            "crc_ok": int(frame.crc_ok),
+                            "received_text": frame.payload.decode("utf-8", errors="replace"),
+                        }
                     test = compare_test_bits(frame.payload)
                     if test is not None:
                         errors, bits = test
@@ -275,6 +370,7 @@ class Receiver(tk.Tk):
     def _close(self) -> None:
         self.audio.stop()
         self.reference_server.stop()
+        self.control.stop()
         self.destroy()
 
 

@@ -100,6 +100,87 @@ use a 48 kHz audio stream for FSK transmission and reception. A physical
 speaker-to-microphone path or a suitable loopback connection is needed to
 receive the transmitter's signal.
 
+## Automated BER and signal-strength measurements
+
+Install the additional plotting dependency with
+`.venv\Scripts\python.exe -m pip install -r requirements-experiment.txt`
+on Windows, or `.venv/bin/python -m pip install -r requirements-experiment.txt`
+on macOS. Open **Nadajnik** and **Odbiornik** first. Check the device numbers with
+`python sweep.py --list-devices`, then run, for example:
+
+```sh
+.venv/bin/python sweep.py --output-device 0 --input-device 1
+```
+
+On Windows use `.venv\Scripts\python.exe` in place of `.venv/bin/python`.
+The script controls both visible applications through localhost commands. It
+sets the same FSK parameters in both windows, sends the fixed text **Laser
+Polarisation Modulation Transceiver** through the selected audio output, and
+reads the decoded result from the receiver window. Expected bytes for BER
+comparison travel locally between the applications; the message itself still
+travels through audio. Microsoft Teams Audio is excluded from automatic device
+selection. The default output level is 40%.
+
+The plan uses bit-0 frequencies `100, 150, 300, 700` Hz, then the same pattern
+times 10 in each higher decade. Bit 1 is 2× or 3× bit 0. For each pair, the bit
+rate is `(bit 1 − bit 0) × 0.25`, `× 0.5`, or `× 0.75`. Settings above 23.9 kHz
+or 10,000 bit/s are omitted, leaving 50 combinations. Run
+`python sweep.py --dry-run` to inspect the full plan without transmitting.
+Fractional bit rates such as 37.5 bit/s are supported.
+
+Each setting has one row in `measurements/ber_sweep_gui.csv`, updated after
+each attempt, with bit-0 and bit-1 frequencies, bit rate, output amplitude,
+BER, error count, received RMS in dBFS, status, and attempt count. The script also creates two PNG plots next
+to the CSV. A `no_frame` row has no BER: no data frame was recognized, so that
+measurement is **pending**, not a zero-error result. The script tries it up to
+three times per run. Use `--resume` to retry pending rows after an interruption
+or later hardware change; completed rows stay intact. `id_mismatch` means a
+frame was recognized but its audio ID was damaged; during an automated trial,
+the one local reference still allows payload BER to be measured. Use
+`--retry-status id_mismatch` with `--resume` to repeat a particular status.
+
+For a small controlled subset, repeat `--only ZERO,ONE,BPS` and choose a
+separate `--output` path. `--amplitude 0.6` sets the digital output level to
+60%. The RMS value is the *received* AC level over the trial; it is not the
+normalized height of the oscilloscope trace or a voltage measurement. Higher
+output level can improve a weak signal, but it does not guarantee successful
+decoding. `--headless` runs the same modem and audio path without the windows.
+
+The final one-transmission study is in `measurements/ber_1x_summary.csv` and
+its two plots. It used the two USB audio cards on the test Mac at 40% output.
+The raw log and frame counts are kept alongside the summary. Earlier sweep
+and amplitude checks were exploratory and are not part of this final study.
+
+### One fresh transmission per setting
+
+With both applications open, run:
+
+```sh
+.venv/bin/python repeat_sweep.py --output-device 0 --input-device 1
+```
+
+This sends the same text **once for every one of the 50 settings** at 40%
+output. Every transmission, including `no_frame`, is appended to
+`measurements/ber_1x_raw.csv`. The script updates
+`measurements/ber_1x_summary.csv` with **exactly five columns**:
+`bit_0_hz`, `bit_1_hz`, `speed_bps`, `ber_percent`, and `signal_rms_dbfs`.
+BER is calculated from the total wrong payload bits divided by the total
+compared bits across recognized frames. With the default single transmission,
+this is the BER of that one frame. It is blank for `no_frame`. Received signal
+strength is the measured RMS level in dBFS. A separate
+`measurements/ber_1x_coverage.csv` reports the number of transmitted,
+recognized, and comparable frames per setting. The two charts are generated
+from the five-column summary. Use `--resume` to continue an interrupted run;
+the script does not repeat already logged transmissions. For a later repeated
+study, set `--transmissions 10` and use a different `--output` name; its
+five-column table pools BER across recognized frames and averages received
+signal power across all attempts.
+
+In the recorded `1x` run, 28 of 50 transmissions produced a recognizable
+frame and 22 were `no_frame`. The BER column is blank for those 22 settings;
+the signal level is present for all 50. The fixed text contains 41 UTF-8 bytes
+(328 payload bits), before protocol overhead.
+
 ## Test the protocol
 
 ```bat

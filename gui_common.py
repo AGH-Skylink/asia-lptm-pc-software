@@ -44,6 +44,13 @@ class DevicePicker(ttk.Frame):
                 return index
         raise ValueError("Wybierz urządzenie audio.")
 
+    def select(self, index: int) -> None:
+        for device_index, name in self.entries:
+            if device_index == index:
+                self.combo.set(name)
+                return
+        raise ValueError(f"Urządzenie audio {index} nie jest dostępne.")
+
 
 class FSKFields(ttk.LabelFrame):
     def __init__(self, parent):
@@ -76,9 +83,9 @@ class FSKFields(ttk.LabelFrame):
         try:
             config = ModemConfig(
                 zero_hz=int(self.zero.get()), one_hz=int(self.one.get()),
-                baud=int(self.baud.get()), max_hz=self.max_hz.get(),
+                baud=float(self.baud.get().replace(",", ".")), max_hz=self.max_hz.get(),
             )
         except ValueError as exc:
-            raise ValueError("Częstotliwości i szybkość muszą być liczbami całkowitymi.") from exc
+            raise ValueError("Częstotliwości muszą być liczbami całkowitymi, a szybkość liczbą.") from exc
         config.validate()
         return config
