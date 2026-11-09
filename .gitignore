@@ -1,4 +1,6 @@
 .venv/
+.pyinstaller-cache/
+.pip-cache/
 __pycache__/
 tests/__pycache__/
 .DS_Store
