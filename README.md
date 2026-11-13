@@ -209,6 +209,25 @@ Received signal level is recorded for all 50 settings. A temporary USB audio
 stream error interrupted the run after 31 settings; the applications were
 restarted and the remaining 19 settings were measured from the saved log.
 
+### Measurements from a file
+
+Create a UTF-8 plan with one transmission per data line. Use three columns,
+`bit_0_hz,bit_1_hz,speed_bps`; a header is optional. Repeated identical lines
+still produce separate transmissions. See `measurements/plan_example.csv`.
+
+```sh
+.venv/bin/python file_sweep.py --plan-file measurements/plan_example.csv \
+  --message-file measurements/test_message_128B.txt \
+  --output measurements/my_measurements_raw.csv
+```
+
+Use `--dry-run` to validate and list every planned transmission without audio.
+The output includes a raw CSV with the source line number, a five-column summary
+with one row per plan line, a metadata JSON file, and two plots. `no_frame`
+receives a 100% score in the summary while its raw BER stays blank. Use
+`--resume` with the same plan, message, and output path to continue after an
+interruption. The script checks the plan and message hashes before resuming.
+
 ## Test the protocol
 
 ```bat
