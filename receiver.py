@@ -4,24 +4,33 @@ from __future__ import annotations
 
 from array import array
 from collections import OrderedDict
+import csv
+from hashlib import sha256
+import json
 from math import log10
-from queue import Empty
+from pathlib import Path
+from queue import Empty, Queue
+import shutil
+from threading import Event, Thread
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 from audio_runtime import HighPass, ReceiverAudio, ac_metrics
+from file_sweep import PLAN_RAW_COLUMNS, read_plan, summary_rows
 from gui_common import DevicePicker, FSKFields
-from ipc_control import CommandServer, RECEIVER_PORT
+from ipc_control import CommandServer, RECEIVER_PORT, TRANSMITTER_PORT, send_command
 from ipc_reference import ReferenceServer
-from modem import FSKDecoder, MAX_FREQUENCY, compare_payload_bits, compare_test_bits
+from modem import FSKDecoder, MAX_FREQUENCY, MAX_TEXT_BYTES, compare_payload_bits, compare_test_bits
+from repeat_sweep import SUMMARY_COLUMNS, _write_csv, read_attempts
+from sweep import _run_gui_trial
 
 
 class Receiver(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Odbiornik akustyczny")
-        self.geometry("840x790")
-        self.minsize(690, 700)
+        self.geometry("900x920")
+        self.minsize(720, 790)
         self.audio = ReceiverAudio()
         self.decoder: FSKDecoder | None = None
         self.status = tk.StringVar(value="Gotowy.")
@@ -45,6 +54,12 @@ class Receiver(tk.Tk):
         self.measurement_sum_sq = 0.0
         self.measurement_count = 0
         self.measurement_noise_dbfs: float | None = None
+        self.scan_plan = tk.StringVar()
+        self.scan_output = tk.StringVar()
+        self.scan_status = tk.StringVar(value="Wybierz plan i plik wynikowy; wiadomość ustaw w nadajniku.")
+        self.scan_stop = Event()
+        self.scan_thread: Thread | None = None
+        self.scan_updates: Queue[tuple[str, str]] = Queue()
 
         body = ttk.Frame(self, padding=14)
         body.pack(fill="both", expand=True)
@@ -64,6 +79,27 @@ class Receiver(tk.Tk):
         self.start_button.pack(side="right")
         self.stop_button = ttk.Button(controls, text="Zatrzymaj", command=self.stop, state="disabled")
         self.stop_button.pack(side="right", padx=(0, 8))
+
+        scan_box = ttk.LabelFrame(body, text="Pomiary z pliku — jeden wiersz = jedno nadanie")
+        scan_box.pack(fill="x", pady=(0, 12))
+        plan_row = ttk.Frame(scan_box)
+        plan_row.pack(fill="x", padx=6, pady=(5, 2))
+        ttk.Label(plan_row, text="Plan CSV", width=12).pack(side="left")
+        ttk.Entry(plan_row, textvariable=self.scan_plan).pack(side="left", fill="x", expand=True)
+        ttk.Button(plan_row, text="Wybierz", command=self._choose_scan_plan).pack(side="left", padx=(6, 0))
+        output_row = ttk.Frame(scan_box)
+        output_row.pack(fill="x", padx=6, pady=2)
+        ttk.Label(output_row, text="Wyniki CSV", width=12).pack(side="left")
+        ttk.Entry(output_row, textvariable=self.scan_output).pack(side="left", fill="x", expand=True)
+        ttk.Button(output_row, text="Wybierz", command=self._choose_scan_output).pack(side="left", padx=(6, 0))
+        scan_actions = ttk.Frame(scan_box)
+        scan_actions.pack(fill="x", padx=6, pady=(3, 6))
+        ttk.Label(scan_actions, textvariable=self.scan_status).pack(side="left", fill="x", expand=True)
+        ttk.Button(scan_actions, text="Zapisz skrót CSV", command=self._save_scan_copy).pack(side="right")
+        self.scan_stop_button = ttk.Button(scan_actions, text="Stop", command=self._stop_scan, state="disabled")
+        self.scan_stop_button.pack(side="right", padx=6)
+        self.scan_start_button = ttk.Button(scan_actions, text="Start", command=self._start_scan)
+        self.scan_start_button.pack(side="right")
 
         scope_box = ttk.LabelFrame(body, text="Oscyloskop: sygnał z mikrofonu")
         scope_box.pack(fill="x", pady=(0, 12))
@@ -119,6 +155,114 @@ class Receiver(tk.Tk):
         else:
             self.stop()
         return "break"
+
+    def _choose_scan_plan(self) -> None:
+        path = filedialog.askopenfilename(filetypes=[("Plan CSV", "*.csv"), ("Wszystkie", "*.*")])
+        if path:
+            self.scan_plan.set(path)
+
+    def _choose_scan_output(self) -> None:
+        path = filedialog.asksaveasfilename(defaultextension=".csv",
+                                             initialfile="pomiary_raw.csv",
+                                             filetypes=[("CSV", "*.csv")])
+        if path:
+            self.scan_output.set(path)
+
+    def _save_scan_copy(self) -> None:
+        output = Path(self.scan_output.get())
+        summary = output.with_name(output.stem.replace("_raw", "") + "_summary.csv")
+        if not summary.exists():
+            messagebox.showinfo("Wyniki", "Skrót CSV powstanie po rozpoczęciu pomiarów.")
+            return
+        target = filedialog.asksaveasfilename(defaultextension=".csv",
+                                              initialfile=summary.name,
+                                              filetypes=[("CSV", "*.csv")])
+        if target:
+            shutil.copyfile(summary, target)
+            self.scan_status.set(f"Zapisano kopię: {target}")
+
+    def _start_scan(self) -> None:
+        if self.scan_thread is not None and self.scan_thread.is_alive():
+            return
+        try:
+            plan_path = Path(self.scan_plan.get())
+            output_path = Path(self.scan_output.get())
+            trials = read_plan(plan_path)
+            if not self.scan_output.get() or output_path.suffix.lower() != ".csv":
+                raise ValueError("Wybierz plik wynikowy CSV w odbiorniku.")
+            input_device = self.input.selected()
+        except (OSError, ValueError) as exc:
+            messagebox.showerror("Nie można rozpocząć pomiarów", str(exc))
+            return
+        self.scan_stop.clear()
+        self.scan_start_button.configure(state="disabled")
+        self.scan_stop_button.configure(state="normal")
+        self.scan_status.set(f"Przygotowanie {len(trials)} pomiarów…")
+        self.scan_thread = Thread(target=self._scan_worker,
+                                  args=(plan_path, output_path, trials, input_device), daemon=True)
+        self.scan_thread.start()
+
+    def _stop_scan(self) -> None:
+        self.scan_stop.set()
+        self.scan_status.set("Zatrzymywanie po bieżącym poleceniu audio…")
+
+    def _scan_worker(self, plan_path: Path, output_path: Path, trials, input_device: int) -> None:
+        try:
+            sender = send_command(TRANSMITTER_PORT, {"action": "measurement_message"})
+            if sender.get("error"):
+                raise ValueError(sender["error"])
+            message = sender["text"]
+            payload = message.encode("utf-8")
+            if not 1 <= len(payload) <= MAX_TEXT_BYTES:
+                raise ValueError(f"Wiadomość musi mieć 1–{MAX_TEXT_BYTES} bajtów UTF-8.")
+            output_device = int(sender["output_device"])
+            amplitude = float(sender["amplitude"])
+            summary_path = output_path.with_name(output_path.stem.replace("_raw", "") + "_summary.csv")
+            metadata_path = output_path.with_name(output_path.stem.replace("_raw", "") + "_metadata.json")
+            metadata = {"plan_sha256": sha256(plan_path.read_bytes()).hexdigest(),
+                        "plan_rows": len(trials), "message": message,
+                        "message_sha256": sha256(payload).hexdigest(),
+                        "amplitude": amplitude, "input_device": input_device,
+                        "output_device": output_device}
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            if output_path.exists():
+                if not metadata_path.exists() or json.loads(metadata_path.read_text(encoding="utf-8")) != metadata:
+                    raise ValueError("Istniejący CSV ma inny plan, wiadomość lub urządzenia. Wybierz nową nazwę.")
+            else:
+                metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n",
+                                         encoding="utf-8")
+                _write_csv(output_path, PLAN_RAW_COLUMNS, [])
+            attempts = read_attempts(output_path)
+            completed = {int(row["plan_line"]) for row in attempts}
+            for index, (line_number, trial) in enumerate(trials, 1):
+                if self.scan_stop.is_set():
+                    break
+                if line_number in completed:
+                    continue
+                self.scan_updates.put(("progress", f"{index}/{len(trials)}: {trial.zero_hz}/{trial.one_hz} Hz, "
+                                                    f"{trial.speed_bps:g} bit/s"))
+                result = _run_gui_trial(trial, input_device, output_device, amplitude,
+                                        message, stop_event=self.scan_stop)
+                result["received_text"] = "".join(
+                    f"\\u{ord(char):04x}" if ord(char) < 32 else char
+                    for char in result["received_text"])
+                row = {"plan_line": line_number, **result, "attempt": 1,
+                       "input_device": input_device, "output_device": output_device}
+                with output_path.open("a", newline="", encoding="utf-8") as target:
+                    csv.DictWriter(target, fieldnames=PLAN_RAW_COLUMNS, lineterminator="\n").writerow(row)
+                attempts.append(row)
+                _write_csv(summary_path, SUMMARY_COLUMNS, summary_rows(trials, attempts))
+            _write_csv(summary_path, SUMMARY_COLUMNS, summary_rows(trials, attempts))
+            self.scan_updates.put(("done", f"Zapisano {len(attempts)}/{len(trials)} pomiarów: {summary_path}"))
+        except InterruptedError:
+            self.scan_updates.put(("done", "Pomiar zatrzymany. Zapisane wyniki można wznowić przyciskiem Start."))
+        except Exception as exc:
+            self.scan_updates.put(("error", str(exc)))
+        finally:
+            try:
+                send_command(RECEIVER_PORT, {"action": "finish"})
+            except OSError:
+                pass
 
     def start(self) -> None:
         try:
@@ -271,6 +415,15 @@ class Receiver(tk.Tk):
     def _poll(self) -> None:
         try:
             while True:
+                kind, detail = self.scan_updates.get_nowait()
+                self.scan_status.set(detail)
+                if kind in ("done", "error"):
+                    self.scan_start_button.configure(state="normal")
+                    self.scan_stop_button.configure(state="disabled")
+        except Empty:
+            pass
+        try:
+            while True:
                 command, response = self.control.incoming.get_nowait()
                 try:
                     response.put(self._control_command(command))
@@ -368,6 +521,7 @@ class Receiver(tk.Tk):
         self.after(80, self._poll)
 
     def _close(self) -> None:
+        self.scan_stop.set()
         self.audio.stop()
         self.reference_server.stop()
         self.control.stop()

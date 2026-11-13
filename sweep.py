@@ -218,7 +218,9 @@ def _gui_command(port: int, command: dict) -> dict:
 
 
 def _run_gui_trial(trial: Trial, input_device: int, output_device: int,
-                   amplitude: float, message: str = MESSAGE) -> dict:
+                   amplitude: float, message: str = MESSAGE, stop_event=None) -> dict:
+    if stop_event is not None and stop_event.is_set():
+        raise InterruptedError("Pomiar zatrzymany.")
     settings = {"zero_hz": trial.zero_hz, "one_hz": trial.one_hz,
                 "speed_bps": trial.speed_bps}
     _gui_command(RECEIVER_PORT, {"action": "prepare", **settings,
@@ -234,6 +236,10 @@ def _run_gui_trial(trial: Trial, input_device: int, output_device: int,
     received = None
     output_done_at = None
     while monotonic() < deadline:
+        if stop_event is not None and stop_event.is_set():
+            _gui_command(TRANSMITTER_PORT, {"action": "stop"})
+            _gui_command(RECEIVER_PORT, {"action": "finish"})
+            raise InterruptedError("Pomiar zatrzymany.")
         status = _gui_command(RECEIVER_PORT, {"action": "status"})
         candidate = status.get("result")
         if candidate is not None and candidate.get("message_id") == sent["message_id"]:

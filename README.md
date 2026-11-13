@@ -215,6 +215,27 @@ Create a UTF-8 plan with one transmission per data line. Use three columns,
 `bit_0_hz,bit_1_hz,speed_bps`; a header is optional. Repeated identical lines
 still produce separate transmissions. See `measurements/plan_example.csv`.
 
+You can run the plan directly from the two desktop windows:
+
+1. In **Nadajnik**, choose the output device and the text to send. Use either
+   the text field or **Plik UTF-8** to select a message file. Set the output
+   level there as well.
+2. In **Odbiornik**, choose the microphone. Under **Pomiary z pliku**, select
+   the plan CSV and the destination for the results CSV, then click **Start**.
+   Each plan row causes one transmission. The receiver shows the current row
+   and the number of completed measurements.
+3. Click **Stop** to interrupt the run. Click **Start** again with the same plan,
+   message, devices, level, and result path to continue unfinished rows.
+
+The selected results path stores the detailed `*_raw.csv` log. A five-column
+`*_summary.csv` is saved beside it with bit 0 and bit 1 frequencies, speed,
+BER, and received signal level. **Zapisz skrót CSV** in the receiver lets you
+save another copy of that summary wherever you choose. A `*_metadata.json`
+file records the plan and message used for safe resumption. The transmitter
+and receiver must both be open on the same computer during the run.
+
+The command-line version remains available:
+
 ```sh
 .venv/bin/python file_sweep.py --plan-file measurements/plan_example.csv \
   --message-file measurements/test_message_128B.txt \

@@ -91,6 +91,8 @@ class Transmitter(tk.Tk):
         buttons.pack(anchor="e", pady=(10, 0))
         ttk.Button(buttons, text="Wyślij test BER", command=self.send_test).pack(side="left", padx=(0, 8))
         ttk.Button(buttons, text="Wyślij tekst", command=self.send_text).pack(side="left")
+        ttk.Label(tab, text="Pomiar z odbiornika używa wiadomości wybranej tutaj (plik lub pole tekstowe)."
+                  ).pack(anchor="w", pady=(8, 0))
 
     def _generator_tab(self, tabs: ttk.Notebook) -> None:
         tab = ttk.Frame(tabs, padding=12)
@@ -150,6 +152,17 @@ class Transmitter(tk.Tk):
 
     def _control_command(self, command: dict) -> dict:
         action = command.get("action")
+        if action == "measurement_message":
+            text = (Path(self.text_path.get()).read_text(encoding="utf-8")
+                    if self.text_source.get() == "file"
+                    else self.text_input.get("1.0", "end-1c"))
+            if not text:
+                raise ValueError("Wybierz plik wiadomości lub wpisz tekst w nadajniku.")
+            return {"text": text, "output_device": self.output.selected(),
+                    "amplitude": self.level.get() / 100}
+        if action == "stop":
+            self.stop()
+            return {"stopped": True}
         if action == "send":
             zero = int(command["zero_hz"])
             one = int(command["one_hz"])
