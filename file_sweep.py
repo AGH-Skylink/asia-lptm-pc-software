@@ -9,8 +9,9 @@ import json
 from pathlib import Path
 
 from modem import MAX_TEXT_BYTES, ModemConfig
+from plot_results import make_combined_plots
 from repeat_sweep import RAW_COLUMNS, SUMMARY_COLUMNS, _write_csv, read_attempts
-from sweep import MESSAGE, Trial, _run_gui_trial, _select_device, make_plots
+from sweep import MESSAGE, Trial, _run_gui_trial, _select_device
 
 
 PLAN_RAW_COLUMNS = ("plan_line",) + RAW_COLUMNS
@@ -123,7 +124,7 @@ def main() -> None:
         _write_csv(summary_path, SUMMARY_COLUMNS, summary_rows(trials, attempts))
         print(f"  {row['status']}; BER={row['ber_percent']}; RMS={row['signal_rms_dbfs']}", flush=True)
     _write_csv(summary_path, SUMMARY_COLUMNS, summary_rows(trials, attempts))
-    charts = make_plots(summary_path, f"{len(message.encode('utf-8'))} B, nadajnik {args.amplitude * 100:g}%")
+    charts = make_combined_plots(summary_path, f"{len(message.encode('utf-8'))} B, nadajnik {args.amplitude * 100:g}%")
     print("Dziennik:", args.output, "\nSkrót:", summary_path,
           "\nMetadane:", metadata_path, "\nWykresy:", *charts, sep="\n")
 

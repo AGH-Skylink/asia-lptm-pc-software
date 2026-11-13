@@ -11,7 +11,8 @@ from math import log10
 import os
 from pathlib import Path
 
-from sweep import (MESSAGE, _run_gui_trial, _select_device, make_plots, plan)
+from plot_results import make_combined_plots
+from sweep import (MESSAGE, _run_gui_trial, _select_device, plan)
 
 
 RAW_COLUMNS = (
@@ -179,7 +180,7 @@ def main() -> None:
     summary, coverage = aggregate(trials, attempts)
     _write_csv(summary_path, SUMMARY_COLUMNS, summary)
     _write_csv(coverage_path, COVERAGE_COLUMNS, coverage)
-    plots = make_plots(summary_path, f"{len(message_bytes)} B, nadajnik {100 * args.amplitude:g}%")
+    plots = make_combined_plots(summary_path, f"{len(message_bytes)} B, nadajnik {100 * args.amplitude:g}%")
     print("Dziennik:", args.output)
     print("Tabela 5 kolumn:", summary_path)
     print("Liczba rozpoznanych ramek:", coverage_path)

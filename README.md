@@ -177,8 +177,8 @@ from the five-column summary. Use `--resume` to continue an interrupted run;
 the script does not repeat already logged transmissions. For a later repeated
 study, set `--transmissions 10` and use a different `--output` name; its
 five-column table averages BER scores and received signal power across all
-attempts. Each chart uses a separate panel for each bit-0 frequency and labels
-every plotted point with its bit-1 frequency in hertz.
+attempts. Each chart combines all settings on one speed axis and labels each
+point with its bit-1 frequency (`k` means 1000 Hz); color represents bit 0.
 
 In the recorded `1x` run, 28 of 50 transmissions produced a recognizable
 frame and 22 were `no_frame`. The summary scores those 22 settings as 100% BER;
