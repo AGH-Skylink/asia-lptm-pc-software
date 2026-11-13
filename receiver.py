@@ -36,6 +36,7 @@ class Receiver(tk.Tk):
         self.status = tk.StringVar(value="Gotowy.")
         self.listen = tk.BooleanVar(value=False)
         self.latest = array("f")
+        self.scope_samples = array("f")
         self.scope_filter = HighPass(400)
         self.signal_label = tk.StringVar(value="Sygnał: cisza")
         self.scope_label = tk.StringVar(value="Wzmocnienie wykresu: —")
@@ -45,7 +46,7 @@ class Receiver(tk.Tk):
         self.ber_bits = 0
         self.ber_frames = 0
         self.ber_crc_errors = 0
-        self.scope_noise_floor = 0.0001
+        self.receive_gain_db = tk.DoubleVar(value=0)
         self.reference_server = ReferenceServer()
         self.control = CommandServer(RECEIVER_PORT)
         self.references: OrderedDict[bytes, bytes] = OrderedDict()
@@ -111,7 +112,12 @@ class Receiver(tk.Tk):
         self.signal_meter = ttk.Progressbar(meter, maximum=90, length=200)
         self.signal_meter.pack(side="left", fill="x", expand=True, padx=8)
         ttk.Label(meter, textvariable=self.signal_label, width=32).pack(side="left")
-        ttk.Label(scope_box, textvariable=self.scope_label).pack(anchor="w", padx=7, pady=(0, 6))
+        gain_row = ttk.Frame(scope_box)
+        gain_row.pack(fill="x", padx=7, pady=(0, 6))
+        ttk.Label(gain_row, text="Wzmocnienie odbioru [dB]").pack(side="left")
+        ttk.Scale(gain_row, from_=0, to=60, variable=self.receive_gain_db,
+                  orient="horizontal", command=lambda _value: self._draw_scope()).pack(side="left", fill="x", expand=True, padx=8)
+        ttk.Label(gain_row, textvariable=self.scope_label).pack(side="left")
 
         ber_row = ttk.Frame(body)
         ber_row.pack(fill="x", pady=(0, 10))
@@ -383,21 +389,18 @@ class Receiver(tk.Tk):
         height = max(1, self.scope.winfo_height())
         middle = height / 2
         self.scope.create_line(0, middle, width, middle, fill="#3c5660")
-        if not self.latest:
+        if not self.scope_samples:
             return
-        length = len(self.latest)
-        offset, _, rms = ac_metrics(self.latest)
-        threshold = max(0.00015, 3 * self.scope_noise_floor)
-        if rms < threshold:
-            self.scope_noise_floor = 0.98 * self.scope_noise_floor + 0.02 * rms
-            self.scope_label.set(f"Szum tła ukryty (RMS {rms:.5f} FS)")
-            return
-        scale = max(1.6 * rms, 1e-5)
-        self.scope_label.set(f"Wzmocnienie wykresu AC: ×{1 / scale:.1f} (RMS {rms:.4f} FS)")
+        length = len(self.scope_samples)
+        gain_db = self.receive_gain_db.get()
+        gain = 10 ** (gain_db / 20)
+        self.scope_label.set(f"{gain_db:.0f} dB (×{gain:.1f})")
+        offset, peak, _ = ac_metrics(self.scope_samples)
+        scale = max(peak, 1e-9)
         points = []
         for index in range(min(width, 500)):
             source_index = min(length - 1, index * length // min(width, 500))
-            normalized = max(-1.0, min(1.0, (self.latest[source_index] - offset) / scale))
+            normalized = max(-1.0, min(1.0, (self.scope_samples[source_index] - offset) / scale))
             y = middle - normalized * (height * 0.44)
             points.extend((index * width / min(width, 500), y))
         if len(points) >= 4:
@@ -452,10 +455,13 @@ class Receiver(tk.Tk):
                 raw = array("f")
                 raw.frombytes(chunk)
                 self.latest = self.scope_filter.process(raw)
+                gain = 10 ** (self.receive_gain_db.get() / 20)
+                amplified = array("f", (max(-1.0, min(1.0, sample * gain)) for sample in self.latest))
+                self.scope_samples = amplified
                 if self.measurement_active:
                     self.measurement_sum_sq += sum(sample * sample for sample in self.latest)
                     self.measurement_count += len(self.latest)
-                for frame in self.decoder.feed_frames(chunk):
+                for frame in self.decoder.feed_frames(amplified.tobytes()):
                     # Each received frame replaces the previous result, including
                     # frames that fail CRC, so stale text cannot look newly received.
                     self.result.delete("1.0", "end")

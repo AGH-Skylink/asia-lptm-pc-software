@@ -1,0 +1,9 @@
+{
+  "message": "Laser Polarisation Modulation Transceiver | Test 128B | ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+  "message_bytes": 128,
+  "message_sha256": "06f7ae8b9f310f844ce4ecbe84f5102245a9dadd5639a4e9a0fbb7ef3e350968",
+  "amplitude": 1.0,
+  "input_device": 1,
+  "output_device": 0,
+  "settings": 1
+}

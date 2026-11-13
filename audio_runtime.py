@@ -25,7 +25,7 @@ def ac_metrics(samples: array) -> tuple[float, float, float]:
 
 
 class HighPass:
-    """Stateful first-order filter for the visual signal display only."""
+    """Stateful first-order high-pass filter for captured audio."""
 
     def __init__(self, cutoff_hz: float):
         if cutoff_hz <= 0:

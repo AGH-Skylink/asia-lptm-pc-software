@@ -1,0 +1,5 @@
+bit_0_hz,bit_1_hz,speed_bps,speed_factor,tx_amplitude,attempt,input_device,output_device,status,ber_percent,bit_errors,compared_bits,signal_rms_dbfs,noise_rms_dbfs,crc_ok,received_text,message_id,measured_at_utc
+100,200,25,0.25,0.4,1,1,0,no_frame,,,,-86.17702435950206,-62.45432907597501,,,51d8268a597cbf09,2026-11-13T15:52:16+00:00
+100,200,50,0.5,0.4,1,1,0,no_frame,,,,-86.18022405594488,-61.17986590106591,,,7beb3771e65ac2ab,2026-11-13T15:53:00+00:00
+100,200,75,0.75,0.4,1,1,0,no_frame,,,,-86.20308631540763,-62.446503179797276,,,b3d877ba46c04fbd,2026-11-13T15:53:36+00:00
+100,300,50,0.25,0.4,1,1,0,no_frame,,,,-86.17187817742185,-63.39371249433465,,,1fa72cc82bee33f1,2026-11-13T15:54:20+00:00

@@ -9,6 +9,7 @@ from hashlib import sha256
 import json
 from math import log10
 import os
+from time import sleep
 from pathlib import Path
 
 from plot_results import make_combined_plots
@@ -103,6 +104,7 @@ def main() -> None:
                         help="CSV pojedynczych nadań; tabela 5 kolumn powstanie obok.")
     parser.add_argument("--resume", action="store_true", help="Kontynuuj istniejący dziennik nadań.")
     parser.add_argument("--dry-run", action="store_true", help="Pokaż liczbę planowanych nadań bez audio.")
+    parser.add_argument("--pause", type=float, default=0, help="Przerwa w sekundach przed każdym nadaniem.")
     args = parser.parse_args()
     try:
         message = args.message_file.read_text(encoding="utf-8") if args.message_file else MESSAGE
@@ -116,7 +118,7 @@ def main() -> None:
         trials = _selected_trials(args.only)
     except ValueError as exc:
         parser.error(str(exc))
-    if not 0 < args.amplitude <= 1 or args.transmissions < 1:
+    if not 0 < args.amplitude <= 1 or args.transmissions < 1 or args.pause < 0:
         parser.error("Amplituda musi być w (0,1], a liczba nadań dodatnia.")
     if args.dry_run:
         print(f"Kombinacje: {len(trials)}; nadań na kombinację: {args.transmissions}; "
@@ -162,6 +164,9 @@ def main() -> None:
             attempt_number = len(grouped[trial.key]) + 1
             print(f"[{count}/{planned_remaining}] 0={trial.zero_hz} Hz, 1={trial.one_hz} Hz, "
                   f"{trial.speed_bps:g} bit/s, nadanie {attempt_number}/{args.transmissions}", flush=True)
+            if args.pause:
+                print(f"  Start nadania za {args.pause:g} s", flush=True)
+                sleep(args.pause)
             result = _run_gui_trial(trial, input_device, output_device, args.amplitude, message)
             result["received_text"] = "".join(
                 f"\\u{ord(character):04x}" if ord(character) < 32

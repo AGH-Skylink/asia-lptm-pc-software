@@ -1,0 +1,2 @@
+bit_0_hz,bit_1_hz,speed_bps,speed_factor,tx_amplitude,attempt,input_device,output_device,status,ber_percent,bit_errors,compared_bits,signal_rms_dbfs,noise_rms_dbfs,crc_ok,received_text,message_id,measured_at_utc
+700,1400,350,0.5,0.8,1,1,0,id_mismatch,2.5390625,26,1024,-21.651701444435254,-24.117186691646438,0,"\u000caser PNlA""isation M*$ulatign D2ansceiver | Test 128B | ABCDEBGH\u0009JKLMLOPQRCTUVWPYZ01230\u001527\u00188ABCDEFGHIJKLMNOPPRSTUTWXYZ0103456789",9918cadfe82f9271,2026-11-13T17:13:13+00:00
