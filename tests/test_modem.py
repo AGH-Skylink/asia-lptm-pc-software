@@ -8,6 +8,57 @@ from modem import (FSKDecoder, HEADER, MAX_FREQUENCY, PROBE, TEST_PAYLOAD, Modem
 
 
 class ModemTests(unittest.TestCase):
+    def test_partial_message_is_available_before_crc_and_retained_on_bad_crc(self):
+        config = ModemConfig(zero_hz=4000, one_hz=8000, baud=1000)
+        payload = "Zażółć".encode("utf-8")
+        bits = encode_payload(payload)
+        bits[-1] ^= 1
+        pcm = b"".join(fsk_chunks(bits, config, .5))
+        decoder = FSKDecoder(config)
+        count = len(HEADER) + len(PROBE) + ID_BYTES * 8 + 16 + 5 * 8
+        cutoff = config.symbol_boundary(count) * 4
+        self.assertEqual(decoder.feed_frames(pcm[:cutoff]), [])
+        self.assertEqual(decoder.progress.payload, payload[:5])
+        self.assertEqual(decoder.progress.expected_bytes, len(payload))
+        frames = decoder.feed_frames(pcm[cutoff:])
+        self.assertEqual(len(frames), 1)
+        self.assertEqual(frames[0].payload, payload)
+        self.assertFalse(frames[0].crc_ok)
+
+    def test_multibit_modulations_with_noise_gain_and_capture_offset(self):
+        for mode in ("4FSK", "16QAM"):
+            for rate in (48_000, 192_000):
+                with self.subTest(mode=mode, rate=rate):
+                    config = ModemConfig(zero_hz=4000, one_hz=10000, baud=1234,
+                                         modulation=mode, sample_rate=rate)
+                    payload = bytes(range(256))
+                    raw = array("f", [0.0] * 713)
+                    for chunk in fsk_chunks(encode_payload(payload), config, 0.5):
+                        raw.frombytes(chunk)
+                    rng = random.Random(47)
+                    raw = array("f", (sample * 0.6 + rng.uniform(-0.005, 0.005) for sample in raw))
+                    decoder = FSKDecoder(config)
+                    frames = []
+                    for start in range(0, len(raw), 997):
+                        frames.extend(decoder.feed_frames(raw[start:start + 997].tobytes()))
+                    self.assertEqual([frame.payload for frame in frames if frame.crc_ok], [payload])
+
+    def test_extended_band_and_4fsk_spacing(self):
+        config = ModemConfig(zero_hz=12000, one_hz=48000, max_hz=48000,
+                             modulation="4FSK", sample_rate=192000, baud=10000)
+        config.validate()
+        self.assertEqual(config.tones, (12000, 24000, 36000, 48000))
+        self.assertEqual(config.symbol_rate, 5000)
+        frames = []
+        decoder = FSKDecoder(config)
+        for chunk in fsk_chunks(encode_payload(b"48 kHz"), config, 0.5):
+            frames.extend(decoder.feed_frames(chunk))
+        self.assertEqual([frame.payload for frame in frames if frame.crc_ok], [b"48 kHz"])
+        with self.assertRaises(ValueError):
+            ModemConfig(zero_hz=12000, one_hz=48000, max_hz=48000, sample_rate=96000).validate()
+        with self.assertRaises(ValueError):
+            ModemConfig(zero_hz=1200, one_hz=2200, baud=1000, modulation="4FSK").validate()
+
     def test_crc_known_vector(self):
         self.assertEqual(crc16(b"123456789"), 0x29B1)
 

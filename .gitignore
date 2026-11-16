@@ -5,7 +5,7 @@ __pycache__/
 tests/__pycache__/
 .DS_Store
 build/
-dist/
+
 *.spec
 vm/__pycache__/
 vm/*.iso

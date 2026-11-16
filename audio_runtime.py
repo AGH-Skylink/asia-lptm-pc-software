@@ -6,7 +6,7 @@ from array import array
 from math import pi, sqrt
 from pathlib import Path
 from queue import Empty, Full, Queue
-from threading import Event, Thread
+from threading import Event, Lock, Thread
 from typing import Callable, Iterable
 
 import sounddevice as sd
@@ -27,10 +27,10 @@ def ac_metrics(samples: array) -> tuple[float, float, float]:
 class HighPass:
     """Stateful first-order high-pass filter for captured audio."""
 
-    def __init__(self, cutoff_hz: float):
+    def __init__(self, cutoff_hz: float, sample_rate: int = SAMPLE_RATE):
         if cutoff_hz <= 0:
             raise ValueError("Częstotliwość filtru musi być dodatnia.")
-        self.alpha = SAMPLE_RATE / (SAMPLE_RATE + 2 * pi * cutoff_hz)
+        self.alpha = sample_rate / (sample_rate + 2 * pi * cutoff_hz)
         self.previous_input = 0.0
         self.previous_output = 0.0
 
@@ -113,10 +113,10 @@ class OutputPlayer:
         self.thread = Thread(target=runner, daemon=True)
         self.thread.start()
 
-    def play_chunks(self, chunks: Iterable[bytes], output_device: int) -> None:
+    def play_chunks(self, chunks: Iterable[bytes], output_device: int, sample_rate: int = SAMPLE_RATE) -> None:
         def work(stop_event: Event) -> None:
             with sd.RawOutputStream(
-                samplerate=SAMPLE_RATE, channels=1, dtype="float32", device=output_device,
+                samplerate=sample_rate, channels=1, dtype="float32", device=output_device,
                 blocksize=0, latency="high",
             ) as stream:
                 for chunk in chunks:
@@ -149,11 +149,69 @@ class OutputPlayer:
         self._start(work)
 
 
+class WaveRecorder:
+    """Write unmodified capture blocks off the PortAudio callback thread."""
+
+    def __init__(self, errors: Queue[str]):
+        self.errors = errors
+        self.lock = Lock()
+        self.pending: Queue[bytes | None] | None = None
+        self.thread: Thread | None = None
+
+    @property
+    def active(self) -> bool:
+        return self.pending is not None
+
+    def start(self, path: str, sample_rate: int) -> None:
+        import soundfile as sf
+
+        self.stop()
+        target = sf.SoundFile(path, mode="w", samplerate=sample_rate, channels=1,
+                              format="WAV", subtype="FLOAT")
+        pending: Queue[bytes | None] = Queue(maxsize=256)
+
+        def write() -> None:
+            failed = False
+            try:
+                while (chunk := pending.get()) is not None:
+                    if not failed:
+                        try:
+                            target.buffer_write(chunk, dtype="float32")
+                        except Exception as exc:
+                            failed = True
+                            self.errors.put(f"Zapis WAV: {exc}")
+            finally:
+                target.close()
+
+        self.thread = Thread(target=write, daemon=True)
+        self.thread.start()
+        with self.lock:
+            self.pending = pending
+
+    def feed(self, chunk: bytes) -> None:
+        with self.lock:
+            if self.pending is not None:
+                try:
+                    self.pending.put_nowait(chunk)
+                except Full:
+                    self.errors.put("Zapis WAV nie nadąża: pominięto blok audio.")
+
+    def stop(self) -> None:
+        with self.lock:
+            pending, self.pending = self.pending, None
+        if pending is not None:
+            pending.put(None)
+        if self.thread is not None:
+            self.thread.join()
+            self.thread = None
+
+
 class ReceiverAudio:
     def __init__(self):
         self.captured: Queue[bytes] = Queue(maxsize=48)
         self.monitor: Queue[bytes] = Queue(maxsize=4)
         self.errors: Queue[str] = Queue()
+        self.recorder = WaveRecorder(self.errors)
         self.monitor_stop = Event()
         self.monitor_thread: Thread | None = None
         self.input_stream = None
@@ -162,7 +220,7 @@ class ReceiverAudio:
     def active(self) -> bool:
         return self.input_stream is not None
 
-    def start(self, input_device: int, output_device: int | None = None) -> None:
+    def start(self, input_device: int, output_device: int | None = None, sample_rate: int = SAMPLE_RATE) -> None:
         self.stop()
         monitor_stop = Event()
         self.monitor_stop = monitor_stop
@@ -171,7 +229,7 @@ class ReceiverAudio:
             def monitor_work() -> None:
                 try:
                     with sd.RawOutputStream(
-                        samplerate=SAMPLE_RATE, channels=1, dtype="float32",
+                        samplerate=sample_rate, channels=1, dtype="float32",
                         device=output_device, blocksize=0, latency="high",
                     ) as stream:
                         while not monitor_stop.is_set():
@@ -190,6 +248,7 @@ class ReceiverAudio:
             if status:
                 self.errors.put(str(status))
             chunk = bytes(indata)
+            self.recorder.feed(chunk)
             for target in (self.captured, self.monitor) if output_device is not None else (self.captured,):
                 try:
                     target.put_nowait(chunk)
@@ -202,7 +261,7 @@ class ReceiverAudio:
 
         try:
             self.input_stream = sd.RawInputStream(
-                samplerate=SAMPLE_RATE, channels=1, dtype="float32", device=input_device,
+                samplerate=sample_rate, channels=1, dtype="float32", device=input_device,
                 blocksize=2_048, callback=callback, latency="high",
             )
             self.input_stream.start()
@@ -218,6 +277,7 @@ class ReceiverAudio:
                 stream.stop()
             finally:
                 stream.close()
+        self.recorder.stop()
         self.monitor_stop.set()
         if self.monitor_thread and self.monitor_thread.is_alive():
             self.monitor_thread.join(timeout=2)

@@ -1,11 +1,43 @@
 # Acoustic transmitter and receiver
 
-Two desktop applications for Windows 11 and macOS. The transmitter can play
-an audio file, generate a sine wave from 0 to 23.9 kHz, and send text through a
-speaker using FSK. The receiver captures microphone input, decodes text,
-displays a normalized waveform and a signal strength meter, measures bit error
+Three desktop applications for Windows 11 and macOS. The transmitter can play
+an audio file, generate a sine wave from 0 to 48 kHz, and send text through a
+speaker using 2FSK, 4FSK or 16QAM. The receiver captures microphone input, decodes text,
+displays a fixed-scale waveform and a signal strength meter, measures bit error
 rate (BER) on every FSK frame, saves received text, and can optionally monitor
 the microphone through a speaker.
+
+**Transceiver** combines the existing transmitter and receiver in one window.
+It has two columns without tabs: chat and file transfers on the left, and
+the oscilloscope and shared modem settings on the right. Frequency, modulation, encoding, sample rate,
+automatic announcements, output device and transmit level stay synchronized.
+Start this app on each station for two-way chat and file transfer; separate
+transmitter/receiver processes are not required.
+The default Transceiver bit rate is 500 bit/s. The **Wyślij plik / zdjęcie**
+panel has a JPEG chooser, byte progress and an estimated transmission time.
+Generator, local audio playback, logging and CSV measurements are available
+through **Narzędzia dodatkowe** on the same page.
+
+The standalone receiver also has a **Czat** field with message history and a
+composer. Choose **Wyjście odsłuchu / czatu**, type a reply and press **Wyślij**
+or Ctrl+Enter. It sends audio directly and starts reception if necessary. In
+Transceiver the same composer uses the integrated transmitter. Received text
+updates progressively in its history, including incomplete and bad-CRC messages.
+The chat keeps both directions, excludes echoes of its own message IDs, and
+can export the conversation through **Zapisz czat**. Outgoing status **Nadano**
+means audio playback finished; it is not a delivery acknowledgement.
+Switching the text encoding to ASCII converts the composer contents to readable
+ASCII (for example Polish diacritics to plain Latin letters). Unsupported symbols
+become `?`. Text pasted after switching is also converted before sending. Binary
+files are unaffected by this setting.
+
+Chat and the oscilloscope share a two-column layout: chat on the left and the
+scope on the right. The scope voltage axis is fixed at −1…+1 V with 0.5 V
+divisions, assuming PCM ±1 corresponds to ±1 V. There is no amplitude
+normalization. A display-gain control magnifies the trace and marks values that
+exceed the axis range. The time axis uses the actual capture sample rate and
+offers 5, 10, 20, 50 or 100 ms windows. The trace displays raw capture samples;
+the signal-strength meter separately measures filtered AC levels.
 
 ## Run from source
 
@@ -19,11 +51,12 @@ py -3 -m venv .venv
 
 Start the receiver in a second terminal window with
 `.venv\Scripts\python.exe receiver.py`.
+Alternatively, run `.venv\Scripts\python.exe transceiver.py` for the combined app.
 
 Run the applications on separate computers or use two audio devices. If both
 applications run on one computer, select separate input and output devices.
-Set the same frequencies for bits `0` and `1` and the same bit rate in both
-windows. Start the receiver first, then click **Wyślij tekst** (Send text) in
+Automatic receiver settings are enabled by default in both windows. Start the
+receiver first, then click **Wyślij tekst** (Send text) in
 the transmitter. The default 1200/2200 Hz and 25 bits/s are a starting point.
 The bit rate can be set from 5 to 10,000 bits/s. At higher rates, the bit 0
 and bit 1 frequencies must be farther apart. For 10,000 bits/s, try
@@ -31,15 +64,87 @@ and bit 1 frequencies must be farther apart. For 10,000 bits/s, try
 microphones may not carry these frequencies or this data rate reliably.
 Reception depends on volume, microphone, distance, and ambient noise. Longer
 messages take proportionally longer to transmit. The maximum message size is
-2048 UTF-8 bytes.
+2048 bytes in the selected text encoding (ASCII or UTF-8). Binary files are
+transferred in multiple frames and are not limited to 2048 bytes.
+
+Before a normal transmission, the transmitter announces its modulation,
+frequencies, bit rate, sample rate and text encoding through an acoustic
+1200/2200 Hz, 500 bit/s 2FSK frame. The receiver listens for this announcement
+alongside its current mode and applies the settings automatically. A two-second
+guard interval allows audio-device reconfiguration before data starts. This
+works across computers without the local IPC connection. It is a one-way
+announcement, without acknowledgement or automatic retransmission. Start the
+receiver before sending; its audio hardware must support the announced rate.
+Changing sample rate closes an active WAV recording. Disable automatic settings
+at both ends to configure everything manually. CSV measurements use manual
+2FSK settings and do not send announcements.
 
 The level slider sets digital amplitude as a percentage. The physical output
 voltage depends on the sound card, operating system settings, and amplifier;
 displaying volts would require measurement and calibration. A 23.9 kHz signal
 is just below the 24 kHz Nyquist limit of the 48 kHz sample rate; exactly
-24 kHz cannot be generated as a usable sine wave. Ordinary speakers and
+24 kHz cannot be generated as a usable sine wave. To extend the signal range to
+48 kHz, select **192000** samples/s in both modem panels (or separately in the
+generator tab). At 96000 samples/s the highest tone is 47.9 kHz; at 192000 it
+is 48 kHz. The selected input, output and monitor devices must support the
+selected sample rate. Ordinary speakers and
 microphones may not reproduce the top of this range. For monitoring, use headphones
 or keep the level low to avoid acoustic feedback.
+
+The **Dobierz górną z bit/s** button calculates the minimum upper frequency
+from the lower frequency and requested bit rate. For 2FSK the minimum spacing
+is the bit rate. For 4FSK, the two endpoints define four equally spaced tones
+for symbols `00`, `01`, `10`, `11`; intermediate tones are automatic. Each
+symbol carries two bits, so its rate is half the bit rate and the endpoint
+span must be at least 1.5 times the bit rate.
+The **Dobierz bit/s z pasma** button calculates the maximum allowed bit rate
+from the selected endpoints, capped at 10000 bit/s. The panel previews the
+derived tones (or QAM carrier) and symbol rate.
+
+**16QAM** uses Gray-coded I/Q levels and a carrier at the midpoint of the two
+frequency settings. Each symbol carries four bits; the first half of each
+symbol is a known carrier pilot for phase and gain recovery, and the second
+half carries the constellation point. This is an application-specific framing
+format. The lower frequency must be at least twice the symbol rate. Both ends
+must select 16QAM. Noisy or nonlinear audio paths can distort its amplitude
+levels. The receiver demodulates the original PCM; display gain and the scope
+filter do not alter decoded samples. CSV measurement plans continue to use
+2FSK at 48000 samples/s.
+
+The receiver shows text as complete bytes arrive, before the final CRC is
+available. Incomplete UTF-8 characters wait for the remaining bytes. Partial
+messages and messages with bad CRC remain visible with their status, byte count
+and BER. **Zapisz wiadomość + BER** saves the displayed message and report on
+request, including incomplete messages. Select a destination and enable
+**Zapisuj tekst w trakcie odbioru + bajty i BER** to append text as it arrives;
+decoding corrections and the final CRC/BER report are marked in the log.
+The report files use UTF-8 regardless of the transmission encoding.
+
+**Nagrywaj WAV** selects a file and records unmodified microphone samples in
+mono float WAV at the current capture rate. **Zakończ WAV**, stopping reception,
+or closing the receiver finishes the recording. Recording uses a separate writer
+thread so file I/O does not run in the audio callback.
+
+Use **Wyślij plik / zdjęcie** to transfer an image or any binary file. In the
+Transceiver it uses the shared settings; the standalone transmitter uses its
+text/modulation settings. JPEG is always sent as binary bytes, independently
+of ASCII/UTF-8. Selecting a binary image through the standalone transmitter's
+legacy text-file path also routes it to binary file transfer. The receiver automatically saves it
+under its original name and extension in **Folder odebranych plików** (default:
+`~/Downloads/LPTM`). First comes an ASCII JSON header with name, size, block size
+and SHA-256; then numbered 1024-byte binary blocks and an end marker. Each frame
+has CRC. The receiver writes each accepted block to its numbered position in
+`.part`, preserving later blocks even if an earlier block is missing. It saves
+the finished file automatically as soon as all blocks arrive and SHA-256 matches;
+the end marker is not required. An early end marker reports missing blocks while
+still allowing delayed copies to complete the file. **Otwórz folder** opens the
+destination shown in the receiver. Existing files are
+preserved by adding the transfer ID to the new name. File packets are sent twice
+by default; Transceiver offers 1–3 repetitions. The receiver ignores duplicate
+blocks, including repeated end markers, so one lost copy can be recovered from
+the next. Missing/corrupted blocks after all repetitions leave `.part`; send the
+file again to retry. There is no resume or ACK mechanism.
+A 1 MB image takes at least 1600 seconds at 5000 bit/s, plus framing overhead.
 
 When both applications run on the same computer, the transmitter sends the
 expected message bytes to the receiver over a local-only connection at
@@ -57,21 +162,21 @@ local reference. **Wyślij test BER** adds 1,024 known data bits to the probe
 measurement. Lost frames whose preamble or length is too damaged to recognize
 are excluded. **Wyzeruj BER** resets the counters. Starting a new local send
 clears the previous received text immediately; any newly decoded frame also
-replaces it. If CRC fails, the received-text box remains empty. Both
+replaces it. If CRC fails, the received text remains visible and is marked as
+damaged. Both
 applications must use the same protocol version. The signal
 meter shows AC peak and RMS in dBFS after removal of DC offset and slow drift.
-The scope filters out frequencies well below the configured FSK tones, hides
-background noise, and normalizes blocks whose filtered level exceeds its noise
-gate. The filter affects only the display and meter, not demodulation.
+The meter filters out frequencies well below the configured FSK tones. The
+filter affects the meter, not the scope trace or demodulation.
 
-An audio file is **played locally**; it is not transmitted as data for the
-receiver to reconstruct. Supported formats depend on the libsndfile library
+The **Plik audio** tab plays audio locally; the separate **Wyślij plik / zdjęcie**
+tab transfers the actual file bytes for reconstruction. Playback formats depend on the libsndfile library
 bundled with `soundfile`. WAV is the safest choice.
 
-## Build the two Windows executables
+## Build the Windows executables
 
 Run `build_windows.bat` on Windows. The resulting files are
-`dist\Nadajnik.exe` and `dist\Odbiornik.exe`. PyInstaller must build on
+`dist\Nadajnik.exe`, `dist\Odbiornik.exe` and `dist\Transceiver.exe`. PyInstaller must build on
 the target operating system, so run this script on Windows and then check the
 audio input and output on the target devices.
 
@@ -90,13 +195,14 @@ chmod +x build_macos.sh
 ./build_macos.sh
 open dist/Nadajnik.app
 open dist/Odbiornik.app
+open dist/Transceiver.app
 ```
 
-The build creates `dist/Nadajnik.app` and `dist/Odbiornik.app` for the
+The build creates `dist/Nadajnik.app`, `dist/Odbiornik.app` and `dist/Transceiver.app` for the
 architecture of the Python interpreter used to build them. Select the USB
 audio output in the transmitter and the USB audio input in the receiver.
 macOS may ask for microphone access when the receiver starts. Both programs
-use a 48 kHz audio stream for FSK transmission and reception. A physical
+use a 48 kHz audio stream by default, with optional 96/192 kHz sampling. A physical
 speaker-to-microphone path or a suitable loopback connection is needed to
 receive the transmitter's signal.
 

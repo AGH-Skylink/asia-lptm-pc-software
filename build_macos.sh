@@ -22,4 +22,12 @@ plutil -insert NSMicrophoneUsageDescription -string \
     dist/Odbiornik.app/Contents/Info.plist
 codesign --force --deep --sign - dist/Odbiornik.app
 
-echo "Built: dist/Nadajnik.app and dist/Odbiornik.app"
+.venv/bin/python -m PyInstaller --noconfirm --clean --onedir --windowed \
+    --collect-all sounddevice --collect-all soundfile \
+    --name Transceiver transceiver.py
+plutil -insert NSMicrophoneUsageDescription -string \
+    "Transceiver uses the microphone to receive acoustic messages and files." \
+    dist/Transceiver.app/Contents/Info.plist
+codesign --force --deep --sign - dist/Transceiver.app
+
+echo "Built: dist/Nadajnik.app, dist/Odbiornik.app and dist/Transceiver.app"
