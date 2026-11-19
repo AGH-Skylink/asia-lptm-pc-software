@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE svg
+  PUBLIC '-//W3C//DTD SVG 1.0//EN'
+  'http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd'>
+<svg width="501.27559055118115" height="276" preserveAspectRatio="xMinYMin meet" viewBox="0 0 501 276" xmlns="http://www.w3.org/2000/svg" version="1.0" fill-rule="evenodd" xmlns:xlink="http://www.w3.org/1999/xlink">
+	<title>...</title>
+	<desc>...</desc>
+	<clipPath id="clip">
+		<rect x="0" y="0" width="501.27559055118115" height="276"/>
+	</clipPath>
+	<g id="group" transform="scale(1,-1) translate(0,-276)" style="clip-path: url(#clip)">
+		<g transform="">
+			<rect x="0" y="235" width="501.27559055118115" height="38" rx="7" ry="7" style="stroke: rgb(0%,49%,52%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(93%,96%,97%); fill-rule: evenodd;"/>
+			<text x="10" y="253" style="font-family: BodyBold; font-size: 10px;fill: rgb(6%,16%,27%); stroke:none;" transform="translate(0,506) scale(1,-1)">Wspólny pasek: wejście, wyjście, start / stop, automatyczne ustawienia</text>
+			<rect x="0" y="102" width="244" height="123" rx="7" ry="7" style="stroke: rgb(0%,49%,52%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(93%,96%,97%); fill-rule: evenodd;"/>
+			<text x="10" y="205" style="font-family: BodyBold; font-size: 10px;fill: rgb(6%,16%,27%); stroke:none;" transform="translate(0,410) scale(1,-1)">CZAT</text>
+			<text x="10" y="188" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,376) scale(1,-1)">Historia obu kierunków</text>
+			<text x="10" y="176" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,352) scale(1,-1)">Odbiór znaków w trakcie transmisji</text>
+			<text x="10" y="164" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,328) scale(1,-1)">Pole odpowiedzi; Ctrl+Enter</text>
+			<text x="10" y="152" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,304) scale(1,-1)">Poziom sygnału; przerwanie nadawania</text>
+			<rect x="0" y="10" width="244" height="82" rx="7" ry="7" style="stroke: rgb(0%,49%,52%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(93%,96%,97%); fill-rule: evenodd;"/>
+			<text x="10" y="72" style="font-family: BodyBold; font-size: 10px;fill: rgb(6%,16%,27%); stroke:none;" transform="translate(0,144) scale(1,-1)">PLIKI</text>
+			<text x="10" y="55" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,110) scale(1,-1)">Wybór JPG / dowolnego pliku</text>
+			<text x="10" y="43" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,86) scale(1,-1)">Postęp, czas, folder docelowy</text>
+			<text x="10" y="31" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,62) scale(1,-1)">Automatyczny zapis, otwarcie folderu</text>
+			<rect x="255" y="112" width="246.27559055118115" height="113" rx="7" ry="7" style="stroke: rgb(0%,49%,52%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(93%,96%,97%); fill-rule: evenodd;"/>
+			<text x="265" y="205" style="font-family: BodyBold; font-size: 10px;fill: rgb(6%,16%,27%); stroke:none;" transform="translate(0,410) scale(1,-1)">OSCYLOSKOP</text>
+			<text x="265" y="188" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,376) scale(1,-1)">Stała skala ±1 V (założenie)</text>
+			<text x="265" y="176" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,352) scale(1,-1)">Okno 5–100 ms; siatka czasu</text>
+			<text x="265" y="164" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,328) scale(1,-1)">Wzmocnienie wyświetlania</text>
+			<rect x="255" y="10" width="246.27559055118115" height="92" rx="7" ry="7" style="stroke: rgb(0%,49%,52%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(93%,96%,97%); fill-rule: evenodd;"/>
+			<text x="265" y="82" style="font-family: BodyBold; font-size: 10px;fill: rgb(6%,16%,27%); stroke:none;" transform="translate(0,164) scale(1,-1)">USTAWIENIA I NARZĘDZIA</text>
+			<text x="265" y="65" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,130) scale(1,-1)">2FSK / 4FSK / 16QAM</text>
+			<text x="265" y="53" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,106) scale(1,-1)">Bitrate, częstotliwości, ASCII / UTF-8</text>
+			<text x="265" y="41" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,82) scale(1,-1)">WAV, generator, pomiary CSV</text>
+		</g>
+	</g>
+</svg>

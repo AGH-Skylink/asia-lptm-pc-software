@@ -214,42 +214,68 @@ class ReceiverAudio:
         self.recorder = WaveRecorder(self.errors)
         self.monitor_stop = Event()
         self.monitor_thread: Thread | None = None
+        self.monitor_enabled = False
+        self.sample_rate = SAMPLE_RATE
         self.input_stream = None
 
     @property
     def active(self) -> bool:
         return self.input_stream is not None
 
-    def start(self, input_device: int, output_device: int | None = None, sample_rate: int = SAMPLE_RATE) -> None:
-        self.stop()
+    def set_monitor(self, output_device: int | None) -> None:
+        """Change the monitoring output without restarting capture or recording."""
+        self.stop_monitor()
+        if output_device is None:
+            return
         monitor_stop = Event()
         self.monitor_stop = monitor_stop
+        self.monitor_enabled = True
+        sample_rate = self.sample_rate
 
-        if output_device is not None:
-            def monitor_work() -> None:
-                try:
-                    with sd.RawOutputStream(
-                        samplerate=sample_rate, channels=1, dtype="float32",
-                        device=output_device, blocksize=0, latency="high",
-                    ) as stream:
-                        while not monitor_stop.is_set():
-                            try:
-                                chunk = self.monitor.get(timeout=0.1)
-                            except Empty:
-                                continue
+        def monitor_work() -> None:
+            try:
+                with sd.RawOutputStream(
+                    samplerate=sample_rate, channels=1, dtype="float32",
+                    device=output_device, blocksize=0, latency="high",
+                ) as stream:
+                    while not monitor_stop.is_set():
+                        try:
+                            chunk = self.monitor.get(timeout=0.1)
+                        except Empty:
+                            continue
+                        if not monitor_stop.is_set():
                             stream.write(chunk)
-                except Exception as exc:
-                    self.errors.put(f"Odsłuch: {exc}")
+            except Exception as exc:
+                self.errors.put(f"Odsłuch: {exc}")
+            finally:
+                if self.monitor_stop is monitor_stop:
+                    self.monitor_enabled = False
 
-            self.monitor_thread = Thread(target=monitor_work, daemon=True)
-            self.monitor_thread.start()
+        self.monitor_thread = Thread(target=monitor_work, daemon=True)
+        self.monitor_thread.start()
+
+    def stop_monitor(self):
+        self.monitor_enabled = False
+        self.monitor_stop.set()
+        if self.monitor_thread and self.monitor_thread.is_alive():
+            self.monitor_thread.join(timeout=2)
+        self.monitor_thread = None
+        while True:
+            try:
+                self.monitor.get_nowait()
+            except Empty:
+                break
+
+    def start(self, input_device: int, output_device: int | None = None, sample_rate: int = SAMPLE_RATE) -> None:
+        self.stop()
+        self.sample_rate = sample_rate
 
         def callback(indata, frames, time_info, status) -> None:
             if status:
                 self.errors.put(str(status))
             chunk = bytes(indata)
             self.recorder.feed(chunk)
-            for target in (self.captured, self.monitor) if output_device is not None else (self.captured,):
+            for target in (self.captured, self.monitor) if self.monitor_enabled else (self.captured,):
                 try:
                     target.put_nowait(chunk)
                 except Full:
@@ -265,6 +291,7 @@ class ReceiverAudio:
                 blocksize=2_048, callback=callback, latency="high",
             )
             self.input_stream.start()
+            self.set_monitor(output_device)
         except Exception:
             self.stop()
             raise
@@ -278,11 +305,8 @@ class ReceiverAudio:
             finally:
                 stream.close()
         self.recorder.stop()
-        self.monitor_stop.set()
-        if self.monitor_thread and self.monitor_thread.is_alive():
-            self.monitor_thread.join(timeout=2)
-        self.monitor_thread = None
-        for target in (self.captured, self.monitor):
+        self.stop_monitor()
+        for target in (self.captured,):
             while True:
                 try:
                     target.get_nowait()

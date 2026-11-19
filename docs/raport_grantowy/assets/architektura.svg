@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE svg
+  PUBLIC '-//W3C//DTD SVG 1.0//EN'
+  'http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd'>
+<svg width="501.27559055118115" height="216" preserveAspectRatio="xMinYMin meet" viewBox="0 0 501 216" xmlns="http://www.w3.org/2000/svg" version="1.0" fill-rule="evenodd" xmlns:xlink="http://www.w3.org/1999/xlink">
+	<title>...</title>
+	<desc>...</desc>
+	<clipPath id="clip">
+		<rect x="0" y="0" width="501.27559055118115" height="216"/>
+	</clipPath>
+	<g id="group" transform="scale(1,-1) translate(0,-216)" style="clip-path: url(#clip)">
+		<g transform="">
+			<rect x="0" y="115" width="108" height="88" rx="7" ry="7" style="stroke: rgb(0%,49%,52%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(93%,96%,97%); fill-rule: evenodd;"/>
+			<text x="10" y="183" style="font-family: BodyBold; font-size: 10px;fill: rgb(6%,16%,27%); stroke:none;" transform="translate(0,366) scale(1,-1)">PC: nadajnik</text>
+			<text x="10" y="166" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,332) scale(1,-1)">Tekst / plik</text>
+			<text x="10" y="154" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,308) scale(1,-1)">Ramkowanie,</text>
+			<text x="10" y="142" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,284) scale(1,-1)">modulacja</text>
+			<rect x="131" y="115" width="103" height="88" rx="7" ry="7" style="stroke: rgb(0%,49%,52%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(93%,96%,97%); fill-rule: evenodd;"/>
+			<text x="141" y="183" style="font-family: BodyBold; font-size: 10px;fill: rgb(6%,16%,27%); stroke:none;" transform="translate(0,366) scale(1,-1)">Wyjście PCM</text>
+			<text x="141" y="166" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,332) scale(1,-1)">float32, mono</text>
+			<text x="141" y="154" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,308) scale(1,-1)">Karta audio / DAC</text>
+			<rect x="258" y="115" width="107" height="88" rx="7" ry="7" style="stroke: rgb(0%,49%,52%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(93%,96%,97%); fill-rule: evenodd;"/>
+			<text x="268" y="183" style="font-family: BodyBold; font-size: 10px;fill: rgb(6%,16%,27%); stroke:none;" transform="translate(0,366) scale(1,-1)">Tor zewnętrzny</text>
+			<text x="268" y="166" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,332) scale(1,-1)">Kanał fizyczny</text>
+			<text x="268" y="154" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,308) scale(1,-1)">Ocena zależna od</text>
+			<text x="268" y="142" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,284) scale(1,-1)">stanowiska</text>
+			<rect x="389" y="115" width="112.27559055118115" height="88" rx="7" ry="7" style="stroke: rgb(0%,49%,52%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(93%,96%,97%); fill-rule: evenodd;"/>
+			<text x="399" y="183" style="font-family: BodyBold; font-size: 10px;fill: rgb(6%,16%,27%); stroke:none;" transform="translate(0,366) scale(1,-1)">PC: odbiornik</text>
+			<text x="399" y="166" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,332) scale(1,-1)">ADC / PCM</text>
+			<text x="399" y="154" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,308) scale(1,-1)">Dekodowanie i zapis</text>
+			<path d="M 108,157 L 131,157 Z" style="stroke: rgb(0%,49%,52%); stroke-linecap: butt; stroke-width: 1.6;"/>
+			<polygon points="131 157, 125 160, 125 154" style="stroke: rgb(0%,49%,52%); stroke-linecap: butt; stroke-width: 1; fill: rgb(0%,49%,52%); fill-rule: evenodd;"/>
+			<path d="M 234,157 L 258,157 Z" style="stroke: rgb(0%,49%,52%); stroke-linecap: butt; stroke-width: 1.6;"/>
+			<polygon points="258 157, 252 160, 252 154" style="stroke: rgb(0%,49%,52%); stroke-linecap: butt; stroke-width: 1; fill: rgb(0%,49%,52%); fill-rule: evenodd;"/>
+			<path d="M 365,157 L 389,157 Z" style="stroke: rgb(0%,49%,52%); stroke-linecap: butt; stroke-width: 1.6;"/>
+			<polygon points="389 157, 383 160, 383 154" style="stroke: rgb(0%,49%,52%); stroke-linecap: butt; stroke-width: 1; fill: rgb(0%,49%,52%); fill-rule: evenodd;"/>
+			<path d="M 55,78 L 446.275591,78 Z" style="stroke: rgb(74%,41%,8%); stroke-linecap: butt; stroke-width: 1.6; stroke-dasharray: 4, 3;"/>
+			<polygon points="446.2756 78, 440.2756 81, 440.2756 75" style="stroke: rgb(74%,41%,8%); stroke-linecap: butt; stroke-width: 1; fill: rgb(74%,41%,8%); fill-rule: evenodd;"/>
+			<text x="65" y="57" style="font-family: Body; font-size: 9px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,114) scale(1,-1)">Oddzielny kanał lokalny: wzorzec BER i sterowanie pomiarem</text>
+			<text x="65" y="40" style="font-family: Body; font-size: 8.5px;fill: rgb(38%,44%,52%); stroke:none;" transform="translate(0,80) scale(1,-1)">127.0.0.1 — dotyczy aplikacji na tym samym komputerze</text>
+		</g>
+	</g>
+</svg>

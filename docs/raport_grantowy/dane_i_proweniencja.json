@@ -1,0 +1,568 @@
+{
+  "data_dokumentu": "17.11.2026",
+  "commit": "f32692ff91a736f3d31d99b01519fb6b3dbcd4d7",
+  "python": "3.14.4",
+  "testy": {
+    "data_weryfikacji": "2026-11-17",
+    "polecenie": "python -m unittest discover -s tests -v",
+    "liczba_testow": 48,
+    "czas_s": 37.97,
+    "wynik": "OK",
+    "kod_zakonczenia": 0,
+    "zakres": "Testy oprogramowania, w tym syntetyczne PCM, GUI z zamockowanymi urządzeniami i lokalne IPC. Nie jest to nowa seria pomiarów fizycznego toru transmisyjnego.",
+    "commit": "f32692ff91a736f3d31d99b01519fb6b3dbcd4d7"
+  },
+  "liczebnosc_testow_w_plikach": {
+    "test_audio_metrics.py": 4,
+    "test_chat.py": 3,
+    "test_file_sweep.py": 2,
+    "test_ipc_control.py": 1,
+    "test_ipc_reference.py": 1,
+    "test_modem.py": 12,
+    "test_receiver_scan.py": 1,
+    "test_receiver_stream.py": 1,
+    "test_repeat_sweep.py": 3,
+    "test_sweep.py": 4,
+    "test_text_encoding.py": 2,
+    "test_transceiver.py": 4,
+    "test_transfers.py": 10
+  },
+  "serie": {
+    "ber_1x": {
+      "count": 50,
+      "status": {
+        "ok": 18,
+        "no_frame": 22,
+        "id_mismatch": 8,
+        "bad_crc": 2
+      },
+      "recognized": 28,
+      "crc_ok": 18,
+      "zero_ber": 18,
+      "errors": 1116,
+      "bits": 9184,
+      "pooled_ber": 12.151567944250871,
+      "score_mean": 50.804878048780495,
+      "metadata": {
+        "message": "Laser Polarisation Modulation Transceiver",
+        "message_bytes": 41,
+        "message_sha256": "f1e9477d9e28a6dcbb0ca3d208c3bda7f5b70b374c4ae4a47c43fedabbc87717",
+        "amplitude": 0.4,
+        "input_device": 1,
+        "output_device": 0,
+        "settings": 50
+      }
+    },
+    "ber_128B_1x": {
+      "count": 50,
+      "status": {
+        "ok": 19,
+        "no_frame": 23,
+        "bad_crc": 4,
+        "id_mismatch": 4
+      },
+      "recognized": 27,
+      "crc_ok": 19,
+      "zero_ber": 19,
+      "errors": 2359,
+      "bits": 29696,
+      "pooled_ber": 7.943830818965517,
+      "score_mean": 47.91080729166667,
+      "metadata": {
+        "message": "Laser Polarisation Modulation Transceiver | Test 128B | ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+        "message_bytes": 128,
+        "message_sha256": "06f7ae8b9f310f844ce4ecbe84f5102245a9dadd5639a4e9a0fbb7ef3e350968",
+        "amplitude": 0.4,
+        "input_device": 1,
+        "output_device": 0,
+        "settings": 50
+      }
+    },
+    "ber_128B_pomiar_1_80procent": {
+      "count": 9,
+      "status": {
+        "ok": 5,
+        "id_mismatch": 1,
+        "no_frame": 3
+      },
+      "recognized": 6,
+      "crc_ok": 5,
+      "zero_ber": 5,
+      "errors": 36,
+      "bits": 6144,
+      "pooled_ber": 0.5859375,
+      "score_mean": 33.723958333333336,
+      "metadata": {
+        "message": "Laser Polarisation Modulation Transceiver | Test 128B | ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+        "message_bytes": 128,
+        "message_sha256": "06f7ae8b9f310f844ce4ecbe84f5102245a9dadd5639a4e9a0fbb7ef3e350968",
+        "amplitude": 0.8,
+        "input_device": 1,
+        "output_device": 0,
+        "settings": 9
+      }
+    },
+    "ber_128B_pomiar_2_80procent": {
+      "count": 9,
+      "status": {
+        "ok": 3,
+        "id_mismatch": 1,
+        "no_frame": 5
+      },
+      "recognized": 4,
+      "crc_ok": 3,
+      "zero_ber": 3,
+      "errors": 12,
+      "bits": 4096,
+      "pooled_ber": 0.29296875,
+      "score_mean": 55.685763888888886,
+      "metadata": {
+        "message": "Laser Polarisation Modulation Transceiver | Test 128B | ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+        "message_bytes": 128,
+        "message_sha256": "06f7ae8b9f310f844ce4ecbe84f5102245a9dadd5639a4e9a0fbb7ef3e350968",
+        "amplitude": 0.8,
+        "input_device": 1,
+        "output_device": 0,
+        "settings": 9
+      }
+    },
+    "ber_128B_pomiar_3_80procent": {
+      "count": 9,
+      "status": {
+        "ok": 3,
+        "id_mismatch": 1,
+        "no_frame": 5
+      },
+      "recognized": 4,
+      "crc_ok": 3,
+      "zero_ber": 3,
+      "errors": 19,
+      "bits": 4096,
+      "pooled_ber": 0.4638671875,
+      "score_mean": 55.76171875,
+      "metadata": {
+        "message": "Laser Polarisation Modulation Transceiver | Test 128B | ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+        "message_bytes": 128,
+        "message_sha256": "06f7ae8b9f310f844ce4ecbe84f5102245a9dadd5639a4e9a0fbb7ef3e350968",
+        "amplitude": 0.8,
+        "input_device": 1,
+        "output_device": 0,
+        "settings": 9
+      }
+    },
+    "ber_128B_pomiar_4_80procent": {
+      "count": 9,
+      "status": {
+        "ok": 3,
+        "no_frame": 6
+      },
+      "recognized": 3,
+      "crc_ok": 3,
+      "zero_ber": 3,
+      "errors": 0,
+      "bits": 3072,
+      "pooled_ber": 0.0,
+      "score_mean": 66.66666666666667,
+      "metadata": {
+        "message": "Laser Polarisation Modulation Transceiver | Test 128B | ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+        "message_bytes": 128,
+        "message_sha256": "06f7ae8b9f310f844ce4ecbe84f5102245a9dadd5639a4e9a0fbb7ef3e350968",
+        "amplitude": 0.8,
+        "input_device": 1,
+        "output_device": 0,
+        "settings": 9
+      }
+    },
+    "ber_128B_pomiar_5_80procent": {
+      "count": 9,
+      "status": {
+        "ok": 2,
+        "bad_crc": 1,
+        "no_frame": 6
+      },
+      "recognized": 3,
+      "crc_ok": 2,
+      "zero_ber": 2,
+      "errors": 1,
+      "bits": 3072,
+      "pooled_ber": 0.032552083333333336,
+      "score_mean": 66.67751736111111,
+      "metadata": {
+        "message": "Laser Polarisation Modulation Transceiver | Test 128B | ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+        "message_bytes": 128,
+        "message_sha256": "06f7ae8b9f310f844ce4ecbe84f5102245a9dadd5639a4e9a0fbb7ef3e350968",
+        "amplitude": 0.8,
+        "input_device": 1,
+        "output_device": 0,
+        "settings": 9
+      }
+    },
+    "ber_128B_pomiar_6_80procent": {
+      "count": 9,
+      "status": {
+        "ok": 1,
+        "no_frame": 8
+      },
+      "recognized": 1,
+      "crc_ok": 1,
+      "zero_ber": 1,
+      "errors": 0,
+      "bits": 1024,
+      "pooled_ber": 0.0,
+      "score_mean": 88.88888888888889,
+      "metadata": {
+        "message": "Laser Polarisation Modulation Transceiver | Test 128B | ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+        "message_bytes": 128,
+        "message_sha256": "06f7ae8b9f310f844ce4ecbe84f5102245a9dadd5639a4e9a0fbb7ef3e350968",
+        "amplitude": 0.8,
+        "input_device": 1,
+        "output_device": 0,
+        "settings": 9
+      }
+    }
+  },
+  "uzupelnienie_stanowiskowe": {
+    "data_uzupelnienia": "2026-11-17",
+    "zrodlo_parametrow": "Informacja zespołu projektu przekazana przy aktualizacji raportu",
+    "klasyfikacja_serii_archiwalnych": "Kanał słabej jakości; nie są reprezentatywne dla wyników uzyskanych po poprawie jakości toru",
+    "przedwzmacniacz": {
+      "wzmocnienie_napieciowe_V_V": 25,
+      "kontekst": "Po zastosowaniu przedwzmacniacza odnotowano poprawę szybkości i sprawny transfer zdjęć"
+    },
+    "wynik_2FSK": {
+      "bitrate_bit_s": 5000,
+      "tony_Hz": [
+        10000,
+        20000
+      ]
+    },
+    "wynik_4FSK": {
+      "bitrate_bit_s": 2500,
+      "dolna_Hz": 5000,
+      "gorna_Hz": 10000,
+      "raportowany_BER_procent": 0.5,
+      "rezultat": "Sprawna transmisja zdjęć; odebrane pliki w TRANSMISJA",
+      "uwaga_o_miary": "Informacja zespołu nie określa, czy BER dotyczy wzorca czy danych; nie przypisuje się tej wartości błędom w ukończonych plikach ani nowej serii CSV"
+    },
+    "obecne_prace": "Trwają próby 4FSK i 16QAM przy zwiększanych szybkościach transmisji; nie podano jeszcze końcowych wyników tych prób",
+    "weryfikacja_odebranych_obrazow": [
+      {
+        "plik": "Bez tytułu.jpg",
+        "bajty": 1241,
+        "szerokosc": 62,
+        "wysokosc": 77,
+        "sha256_odebranego": "aeab8e7441f0e689f7aadcf5b669f935dadd46790cd6d18a86d69a42c6334c66",
+        "sha256_zrodlowego": "aeab8e7441f0e689f7aadcf5b669f935dadd46790cd6d18a86d69a42c6334c66",
+        "identyczne_bajty": true,
+        "reprodukcja": "assets/transmisja_bez_tytulu.jpg"
+      },
+      {
+        "plik": "karmelini.jpg",
+        "bajty": 3878,
+        "szerokosc": 320,
+        "wysokosc": 240,
+        "sha256_odebranego": "2f98189aec6b2554d7cba733ab15795369e7cb35900413d5b0618fc0f292fa3e",
+        "sha256_zrodlowego": "2f98189aec6b2554d7cba733ab15795369e7cb35900413d5b0618fc0f292fa3e",
+        "identyczne_bajty": true,
+        "reprodukcja": "assets/transmisja_karmelini.jpg"
+      }
+    ]
+  },
+  "zrodla": [
+    {
+      "plik": "audio_runtime.py",
+      "bajty": 10708,
+      "sha256": "bddb5c05b63b955c4214a331e7741253c38c64a501885daca7a3b220ca933021"
+    },
+    {
+      "plik": "Bez tytułu.jpg",
+      "bajty": 1241,
+      "sha256": "aeab8e7441f0e689f7aadcf5b669f935dadd46790cd6d18a86d69a42c6334c66"
+    },
+    {
+      "plik": "build_macos.sh",
+      "bajty": 1350,
+      "sha256": "ade1f1e9f0448ab4ca8d57b0627999f236bcf82a1174dd7d50e315237c6ce237"
+    },
+    {
+      "plik": "build_windows.bat",
+      "bajty": 913,
+      "sha256": "035e865f165e91d00df04acde312094566dd641024144b0183bc0626d4784ca1"
+    },
+    {
+      "plik": "chat.py",
+      "bajty": 4722,
+      "sha256": "432745a53de8bba88e46d64ed2ee93426715408053c0322ce098b6323f19baa1"
+    },
+    {
+      "plik": "docs/raport_grantowy/wyniki_przedwzmacniacz.json",
+      "bajty": 1054,
+      "sha256": "62f93b2865fe15fbd04fc537086b0873f73398e1fe1237d3763f293f752bd871"
+    },
+    {
+      "plik": "file_sweep.py",
+      "bajty": 6922,
+      "sha256": "88e5957579bcf1e6540d17617e91cda7db8dbdc48616418e1a28c9d9bee8b062"
+    },
+    {
+      "plik": "gui_common.py",
+      "bajty": 8852,
+      "sha256": "3ee1c08214b866d7ca3a4b0c090c11f36dfba9fb5e98f313ddaa6cda8de93f8a"
+    },
+    {
+      "plik": "ipc_control.py",
+      "bajty": 3321,
+      "sha256": "b03b16396dae8c6e1bb139f07390327bdf104ab66dab24c51159bfa94b22867b"
+    },
+    {
+      "plik": "ipc_reference.py",
+      "bajty": 3313,
+      "sha256": "8744ac176e5f44420010da038041b83c9ac875129f401b766ad904826f1115a0"
+    },
+    {
+      "plik": "karmelini.jpg",
+      "bajty": 3878,
+      "sha256": "2f98189aec6b2554d7cba733ab15795369e7cb35900413d5b0618fc0f292fa3e"
+    },
+    {
+      "plik": "limit_sweep.py",
+      "bajty": 6264,
+      "sha256": "0cebb870f48fae5ba539aab23c255d790897ac209b286dea3ce64aede6729b0d"
+    },
+    {
+      "plik": "measurements/ber_128B_1x_metadata.json",
+      "bajty": 350,
+      "sha256": "13a5cf23254db6e413e214761c5ba9109ea73d3907b356bf4408f0a12f6ef7ca"
+    },
+    {
+      "plik": "measurements/ber_128B_1x_raw.csv",
+      "bajty": 11073,
+      "sha256": "f07eb02edfe5879370dbf85f8865cc79550f5837289d458072ec2a8fe03f1998"
+    },
+    {
+      "plik": "measurements/ber_128B_pomiar_1_80procent_metadata.json",
+      "bajty": 349,
+      "sha256": "92c83edd1ed28f946f6006ae6a23d5558c34b9157a612b15ffa64e1dfe6b3da8"
+    },
+    {
+      "plik": "measurements/ber_128B_pomiar_1_80procent_raw.csv",
+      "bajty": 2182,
+      "sha256": "430f38030597bfac8a22e3493de482658b3a227a5c5c6984d65198cdd5815349"
+    },
+    {
+      "plik": "measurements/ber_128B_pomiar_2_80procent_metadata.json",
+      "bajty": 349,
+      "sha256": "92c83edd1ed28f946f6006ae6a23d5558c34b9157a612b15ffa64e1dfe6b3da8"
+    },
+    {
+      "plik": "measurements/ber_128B_pomiar_2_80procent_raw.csv",
+      "bajty": 1888,
+      "sha256": "723ed802295a9426cf2d1db4954ca074874c3132fb97fa280b46e985b0eeeecb"
+    },
+    {
+      "plik": "measurements/ber_128B_pomiar_3_80procent_metadata.json",
+      "bajty": 349,
+      "sha256": "92c83edd1ed28f946f6006ae6a23d5558c34b9157a612b15ffa64e1dfe6b3da8"
+    },
+    {
+      "plik": "measurements/ber_128B_pomiar_3_80procent_raw.csv",
+      "bajty": 1889,
+      "sha256": "cb16cc29a7f5efa2af71bf49e38b86b8bb2a20f28a4f55622f6f797d6628e974"
+    },
+    {
+      "plik": "measurements/ber_128B_pomiar_4_80procent_metadata.json",
+      "bajty": 349,
+      "sha256": "92c83edd1ed28f946f6006ae6a23d5558c34b9157a612b15ffa64e1dfe6b3da8"
+    },
+    {
+      "plik": "measurements/ber_128B_pomiar_4_80procent_raw.csv",
+      "bajty": 1730,
+      "sha256": "66b4c4defd177ee00a56082ff08806b93a1e7d5dc4599ca33784fa5e685c0477"
+    },
+    {
+      "plik": "measurements/ber_128B_pomiar_5_80procent_metadata.json",
+      "bajty": 349,
+      "sha256": "92c83edd1ed28f946f6006ae6a23d5558c34b9157a612b15ffa64e1dfe6b3da8"
+    },
+    {
+      "plik": "measurements/ber_128B_pomiar_5_80procent_raw.csv",
+      "bajty": 1747,
+      "sha256": "1b3080633b8fea38ee92aec95a28dd96916244ea364bc51ad6c06596b1f810dd"
+    },
+    {
+      "plik": "measurements/ber_128B_pomiar_6_80procent_metadata.json",
+      "bajty": 349,
+      "sha256": "92c83edd1ed28f946f6006ae6a23d5558c34b9157a612b15ffa64e1dfe6b3da8"
+    },
+    {
+      "plik": "measurements/ber_128B_pomiar_6_80procent_raw.csv",
+      "bajty": 1469,
+      "sha256": "2c36e7f2bfd29dac0b40ce11bccbe4b308b6c381138befbbc1d28dbef592005a"
+    },
+    {
+      "plik": "measurements/ber_1x_metadata.json",
+      "bajty": 262,
+      "sha256": "8132a8d35f790a22d24597537194c95dbdf0cb62c47ce7178381fdc9a338785f"
+    },
+    {
+      "plik": "measurements/ber_1x_raw.csv",
+      "bajty": 7779,
+      "sha256": "4e7d9265b703df0a0221d60048962efe43845d09d766fbe1ee51adf7381d0de0"
+    },
+    {
+      "plik": "modem.py",
+      "bajty": 19533,
+      "sha256": "18701d9aeca0865bed4ca3c1fcf24df2d9df95f29d13e79e25531295db3a5988"
+    },
+    {
+      "plik": "plot_results.py",
+      "bajty": 5144,
+      "sha256": "079bce8a65312b58f9fd0095345c9864f636b046566f4eb0974087a2b040f58c"
+    },
+    {
+      "plik": "probe_devices.py",
+      "bajty": 2021,
+      "sha256": "c8db65ec76efaad0f0b3b0849bb3a009f4adb7b8bfdcc9d7e823cb0db11fdbe1"
+    },
+    {
+      "plik": "README.md",
+      "bajty": 21326,
+      "sha256": "05c608f2e1063ec08c2cf66d1da3a4a63c4339e4b01e5d5566c01faebdb760e5"
+    },
+    {
+      "plik": "receiver.py",
+      "bajty": 51216,
+      "sha256": "da8e5b91b7de18107780178fe7b95e4e38e0a7958fad554cbe354fe52a0e4766"
+    },
+    {
+      "plik": "repeat_sweep.py",
+      "bajty": 10353,
+      "sha256": "45ba395a4c41fcb26177d7389c5ac6eb3e7637ef91363d7cafcfe943e420a49a"
+    },
+    {
+      "plik": "requirements.txt",
+      "bajty": 41,
+      "sha256": "7dfdbd69f4fc981dac7f22ce7107b2d39497a284d2952c773ead98684553ad75"
+    },
+    {
+      "plik": "scope.py",
+      "bajty": 4209,
+      "sha256": "4bacd35a5389cf1a2552a8b6daa1b2dab2d5627c16ce9701236f229dc546c283"
+    },
+    {
+      "plik": "sweep.py",
+      "bajty": 23330,
+      "sha256": "7c67f5aa55e13ebac4f8cec42a7009b41caefbcd9d9c05fd00274239eae947b4"
+    },
+    {
+      "plik": "tests/test_audio_metrics.py",
+      "bajty": 1705,
+      "sha256": "4086e716003628d48ad0693d1b05a4c57580f81cdd0eafbc81c81e88cf014de3"
+    },
+    {
+      "plik": "tests/test_chat.py",
+      "bajty": 1660,
+      "sha256": "6a946d9fa7a78d9c256ac7e6d976823df65d1675d04be1c7126f904eb56de096"
+    },
+    {
+      "plik": "tests/test_file_sweep.py",
+      "bajty": 1367,
+      "sha256": "871f98d4ac2bd8eca9824c33ce17b01c5a62e38371dd23dd1be740ed2d2e586e"
+    },
+    {
+      "plik": "tests/test_ipc_control.py",
+      "bajty": 963,
+      "sha256": "d61e05e126104f1579123a227b1100cd3f873b71c18a3b4a1648d5d96f4456ac"
+    },
+    {
+      "plik": "tests/test_ipc_reference.py",
+      "bajty": 700,
+      "sha256": "fd48f4f34ab7d3ab6edaa95d651f631978374657b410bc1dd9f711a0d10a717f"
+    },
+    {
+      "plik": "tests/test_modem.py",
+      "bajty": 8612,
+      "sha256": "b15a985d1bcfdc33634f0a1e77bc10ef1f0fadc51647769102346cff5e0190c4"
+    },
+    {
+      "plik": "tests/test_receiver_scan.py",
+      "bajty": 2528,
+      "sha256": "f1e6fd800ac64a0b1453a10738e8a579e3fd803c4f5c7bf7adbf543eb6e973f8"
+    },
+    {
+      "plik": "tests/test_receiver_stream.py",
+      "bajty": 2116,
+      "sha256": "b465be41f055ed48ba056fd727f06ed54497dbaa911e30d5df5cd0a6ca1d8b3c"
+    },
+    {
+      "plik": "tests/test_repeat_sweep.py",
+      "bajty": 2040,
+      "sha256": "0b7da1b9c27f914fe8ad6d382528b3b1cae253f6a45c0d26fa03e671028bf576"
+    },
+    {
+      "plik": "tests/test_sweep.py",
+      "bajty": 2642,
+      "sha256": "4d057f1cef593fcc5d2eaa17b0b4a257ce6ce3da743b6f007e0e3a9d93faee66"
+    },
+    {
+      "plik": "tests/test_text_encoding.py",
+      "bajty": 433,
+      "sha256": "206be7fb0a96eb27048ec57da0b73cbf23532c694f98fa9cd036dd7a888f37e5"
+    },
+    {
+      "plik": "tests/test_transceiver.py",
+      "bajty": 7873,
+      "sha256": "923366fe93a8f018ac8409c05dff5e3537d74cd2d864ca6cb165423006cebb94"
+    },
+    {
+      "plik": "tests/test_transfers.py",
+      "bajty": 7852,
+      "sha256": "6a0c5ebd2950dec78fb602b60e704030b27f7ee9e0b874f242845ed864efabe4"
+    },
+    {
+      "plik": "text_encoding.py",
+      "bajty": 1006,
+      "sha256": "1b8f0cb6a1bb240e50a6456959881d21ad5549c0b8489c7a039b8df9409319e9"
+    },
+    {
+      "plik": "transceiver.py",
+      "bajty": 4928,
+      "sha256": "599794fcf01fa33b19780653a67d6d347eb8874bf4eb03a45b43eaae808b9303"
+    },
+    {
+      "plik": "transfers.py",
+      "bajty": 7963,
+      "sha256": "ed58794dc36c53da722800b41e4a476e904c116450053c731ce6c10120761121"
+    },
+    {
+      "plik": "TRANSMISJA/Bez tytułu.jpg",
+      "bajty": 1241,
+      "sha256": "aeab8e7441f0e689f7aadcf5b669f935dadd46790cd6d18a86d69a42c6334c66"
+    },
+    {
+      "plik": "TRANSMISJA/karmelek.jpg.part",
+      "bajty": 3072,
+      "sha256": "e03cec541a86a2c6a968dd692ecf64a5533ab161ce877be4c12f5c7eedea673f"
+    },
+    {
+      "plik": "TRANSMISJA/karmelek_7a41026f735bb05b.jpg.part",
+      "bajty": 7168,
+      "sha256": "55fe242dc4ffbaf778c3e4b846a642e8ebc93be1581eb92d7687f03e1a2ca9cc"
+    },
+    {
+      "plik": "TRANSMISJA/karmelini.jpg",
+      "bajty": 3878,
+      "sha256": "2f98189aec6b2554d7cba733ab15795369e7cb35900413d5b0618fc0f292fa3e"
+    },
+    {
+      "plik": "TRANSMISJA/zapisTransmisji16_11.txt",
+      "bajty": 81613,
+      "sha256": "abbcf43e8591685d6b6a6b21756799ca7f3ca148bcde701e0a1f0608ea918540"
+    },
+    {
+      "plik": "transmitter.py",
+      "bajty": 23685,
+      "sha256": "2d47caec880752793652268fd04c43a0bd7f814509a0145f1753c3e45f55019e"
+    }
+  ]
+}

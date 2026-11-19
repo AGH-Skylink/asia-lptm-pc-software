@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE svg
+  PUBLIC '-//W3C//DTD SVG 1.0//EN'
+  'http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd'>
+<svg width="501.27559055118115" height="217" preserveAspectRatio="xMinYMin meet" viewBox="0 0 501 217" xmlns="http://www.w3.org/2000/svg" version="1.0" fill-rule="evenodd" xmlns:xlink="http://www.w3.org/1999/xlink">
+	<title>...</title>
+	<desc>...</desc>
+	<clipPath id="clip">
+		<rect x="0" y="0" width="501.27559055118115" height="217"/>
+	</clipPath>
+	<g id="group" transform="scale(1,-1) translate(0,-217)" style="clip-path: url(#clip)">
+		<g transform="">
+			<rect x="0" y="123" width="139" height="83" rx="7" ry="7" style="stroke: rgb(0%,49%,52%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(93%,96%,97%); fill-rule: evenodd;"/>
+			<text x="10" y="186" style="font-family: BodyBold; font-size: 10px;fill: rgb(6%,16%,27%); stroke:none;" transform="translate(0,372) scale(1,-1)">1. Nagłówek H</text>
+			<text x="10" y="169" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,338) scale(1,-1)">Nazwa, rozmiar</text>
+			<text x="10" y="157" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,314) scale(1,-1)">SHA-256, blok = 1024 B</text>
+			<rect x="169" y="123" width="146" height="83" rx="7" ry="7" style="stroke: rgb(0%,49%,52%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(93%,96%,97%); fill-rule: evenodd;"/>
+			<text x="179" y="186" style="font-family: BodyBold; font-size: 10px;fill: rgb(6%,16%,27%); stroke:none;" transform="translate(0,372) scale(1,-1)">2. Bloki D</text>
+			<text x="179" y="169" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,338) scale(1,-1)">Numer i oryginalne bajty</text>
+			<text x="179" y="157" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,314) scale(1,-1)">1–3 kopie; kontrola CRC</text>
+			<rect x="345" y="123" width="156.27559055118115" height="83" rx="7" ry="7" style="stroke: rgb(0%,49%,52%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(93%,96%,97%); fill-rule: evenodd;"/>
+			<text x="355" y="186" style="font-family: BodyBold; font-size: 10px;fill: rgb(6%,16%,27%); stroke:none;" transform="translate(0,372) scale(1,-1)">3. Zapis .part</text>
+			<text x="355" y="169" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,338) scale(1,-1)">Pozycja wynika z numeru</text>
+			<text x="355" y="157" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,314) scale(1,-1)">Duplikaty pomijane</text>
+			<path d="M 139,163 L 169,163 Z" style="stroke: rgb(0%,49%,52%); stroke-linecap: butt; stroke-width: 1.6;"/>
+			<polygon points="169 163, 163 166, 163 160" style="stroke: rgb(0%,49%,52%); stroke-linecap: butt; stroke-width: 1; fill: rgb(0%,49%,52%); fill-rule: evenodd;"/>
+			<path d="M 315,163 L 345,163 Z" style="stroke: rgb(0%,49%,52%); stroke-linecap: butt; stroke-width: 1.6;"/>
+			<polygon points="345 163, 339 166, 339 160" style="stroke: rgb(0%,49%,52%); stroke-linecap: butt; stroke-width: 1; fill: rgb(0%,49%,52%); fill-rule: evenodd;"/>
+			<rect x="0" y="12" width="234" height="85" rx="7" ry="7" style="stroke: rgb(74%,41%,8%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(93%,96%,97%); fill-rule: evenodd;"/>
+			<text x="10" y="77" style="font-family: BodyBold; font-size: 10px;fill: rgb(6%,16%,27%); stroke:none;" transform="translate(0,154) scale(1,-1)">Brakujące bloki</text>
+			<text x="10" y="60" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,120) scale(1,-1)">Późniejsza kopia może uzupełnić lukę.</text>
+			<text x="10" y="48" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,96) scale(1,-1)">Marker E nie wymusza zamknięcia pliku.</text>
+			<rect x="264" y="12" width="237.27559055118115" height="85" rx="7" ry="7" style="stroke: rgb(0%,49%,52%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(93%,96%,97%); fill-rule: evenodd;"/>
+			<text x="274" y="77" style="font-family: BodyBold; font-size: 10px;fill: rgb(6%,16%,27%); stroke:none;" transform="translate(0,154) scale(1,-1)">Komplet i zgodny SHA-256</text>
+			<text x="274" y="60" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,120) scale(1,-1)">Zamknięcie .part i docelowa nazwa</text>
+			<text x="274" y="48" style="font-family: Body; font-size: 8.8px;fill: rgb(14%,21%,28%); stroke:none;" transform="translate(0,96) scale(1,-1)">Zapis automatyczny; marker E zbędny</text>
+			<path d="M 234,53 L 264,53 Z" style="stroke: rgb(0%,49%,52%); stroke-linecap: butt; stroke-width: 1.6;"/>
+			<polygon points="264 53, 258 56, 258 50" style="stroke: rgb(0%,49%,52%); stroke-linecap: butt; stroke-width: 1; fill: rgb(0%,49%,52%); fill-rule: evenodd;"/>
+		</g>
+	</g>
+</svg>

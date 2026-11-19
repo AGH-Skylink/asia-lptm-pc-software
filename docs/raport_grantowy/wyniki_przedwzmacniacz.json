@@ -1,0 +1,22 @@
+{
+  "data_uzupelnienia": "2026-11-17",
+  "zrodlo_parametrow": "Informacja zespołu projektu przekazana przy aktualizacji raportu",
+  "klasyfikacja_serii_archiwalnych": "Kanał słabej jakości; nie są reprezentatywne dla wyników uzyskanych po poprawie jakości toru",
+  "przedwzmacniacz": {
+    "wzmocnienie_napieciowe_V_V": 25,
+    "kontekst": "Po zastosowaniu przedwzmacniacza odnotowano poprawę szybkości i sprawny transfer zdjęć"
+  },
+  "wynik_2FSK": {
+    "bitrate_bit_s": 5000,
+    "tony_Hz": [10000, 20000]
+  },
+  "wynik_4FSK": {
+    "bitrate_bit_s": 2500,
+    "dolna_Hz": 5000,
+    "gorna_Hz": 10000,
+    "raportowany_BER_procent": 0.5,
+    "rezultat": "Sprawna transmisja zdjęć; odebrane pliki w TRANSMISJA",
+    "uwaga_o_miary": "Informacja zespołu nie określa, czy BER dotyczy wzorca czy danych; nie przypisuje się tej wartości błędom w ukończonych plikach ani nowej serii CSV"
+  },
+  "obecne_prace": "Trwają próby 4FSK i 16QAM przy zwiększanych szybkościach transmisji; nie podano jeszcze końcowych wyników tych prób"
+}

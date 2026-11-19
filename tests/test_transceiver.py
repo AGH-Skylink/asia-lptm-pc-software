@@ -26,6 +26,46 @@ class LinkTests(unittest.TestCase):
 
 
 class TransceiverTests(unittest.TestCase):
+    def test_transmit_monitor_and_playback_have_independent_outputs(self):
+        devices = [(1, "1: Transmit"), (2, "2: Monitor"), (3, "3: Playback")]
+        with patch("gui_common.devices", return_value=devices), \
+             patch("ipc_control.CommandServer.start"), patch("ipc_reference.ReferenceServer.start"), \
+             patch("transmitter.send_reference", return_value=False), \
+             patch("transmitter.OutputPlayer.play_chunks") as play_chunks, \
+             patch("transmitter.OutputPlayer.play_file") as play_file:
+            try:
+                app = Transceiver()
+            except tk.TclError as exc:
+                self.skipTest(str(exc))
+            app.withdraw()
+            try:
+                rx, tx = app.receiver, app.transmitter
+                tx.output.select(1)
+                rx.monitor_output.select(2)
+                tx.playback_output.select(3)
+                self.assertEqual(tx.output.selected(), 1)
+                self.assertEqual(rx.monitor_output.selected(), 2)
+                self.assertEqual(tx.playback_output.selected(), 3)
+                tx._transmit_text("Test", tx.fsk.config(), tx.output.selected(), .4)
+                self.assertEqual(play_chunks.call_args.args[1], 1)
+                tx.start_tone()
+                self.assertEqual(play_chunks.call_args.args[1], 3)
+                tx.audio_path.set("sample.wav")
+                tx.play_audio()
+                self.assertEqual(play_file.call_args.args[1], 3)
+                with patch.object(rx.audio, "start") as receive:
+                    rx.listen.set(True)
+                    rx.start()
+                    self.assertEqual(receive.call_args.args[1], 2)
+                with patch.object(rx.audio, "input_stream", object()), patch.object(rx.audio, "set_monitor") as monitor:
+                    rx._monitor_settings_changed()
+                    monitor.assert_called_with(2)
+                    rx.listen.set(False)
+                    rx._monitor_settings_changed()
+                    monitor.assert_called_with(None)
+            finally:
+                app._close()
+
     def test_jpeg_button_transfers_binary_and_interface_has_no_tabs(self):
         with patch("gui_common.devices", return_value=[(1, "1: Test audio")]), \
              patch("ipc_control.CommandServer.start"), patch("ipc_reference.ReferenceServer.start"), \

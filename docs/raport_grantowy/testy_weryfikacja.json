@@ -1,0 +1,10 @@
+{
+  "data_weryfikacji": "2026-11-17",
+  "polecenie": "python -m unittest discover -s tests -v",
+  "liczba_testow": 48,
+  "czas_s": 37.970,
+  "wynik": "OK",
+  "kod_zakonczenia": 0,
+  "zakres": "Testy oprogramowania, w tym syntetyczne PCM, GUI z zamockowanymi urządzeniami i lokalne IPC. Nie jest to nowa seria pomiarów fizycznego toru transmisyjnego.",
+  "commit": "f32692ff91a736f3d31d99b01519fb6b3dbcd4d7"
+}

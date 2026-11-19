@@ -10,7 +10,7 @@ the microphone through a speaker.
 **Transceiver** combines the existing transmitter and receiver in one window.
 It has two columns without tabs: chat and file transfers on the left, and
 the oscilloscope and shared modem settings on the right. Frequency, modulation, encoding, sample rate,
-automatic announcements, output device and transmit level stay synchronized.
+automatic announcements, transmission output and transmit level stay synchronized.
 Start this app on each station for two-way chat and file transfer; separate
 transmitter/receiver processes are not required.
 The default Transceiver bit rate is 500 bit/s. The **Wyślij plik / zdjęcie**
@@ -18,8 +18,16 @@ panel has a JPEG chooser, byte progress and an estimated transmission time.
 Generator, local audio playback, logging and CSV measurements are available
 through **Narzędzia dodatkowe** on the same page.
 
+Audio outputs are selected independently: **Nadawanie** carries modulated text,
+chat and binary files; **Odsłuch mikrofonu** routes the captured audio when
+**Odsłuch** is enabled; **Odtwarzanie / generator** plays local audio files and
+the sine generator. For example, transmission can use a USB sound card while
+monitoring uses headphones. Changing the monitoring device or enabling/disabling
+monitoring during reception preserves the capture stream, decoder and WAV
+recording. The selected devices must support the active sample rate.
+
 The standalone receiver also has a **Czat** field with message history and a
-composer. Choose **Wyjście odsłuchu / czatu**, type a reply and press **Wyślij**
+composer. Choose **Wyjście nadawania czatu**, type a reply and press **Wyślij**
 or Ctrl+Enter. It sends audio directly and starts reception if necessary. In
 Transceiver the same composer uses the integrated transmitter. Received text
 updates progressively in its history, including incomplete and bad-CRC messages.

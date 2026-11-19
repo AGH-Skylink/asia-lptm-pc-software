@@ -22,6 +22,9 @@ class Transmitter(ttk.Frame):
         receiver = layout["receiver"]
         self.fsk = receiver.fsk
         self.output = receiver.output
+        self.playback_output = DevicePicker(receiver.devices_bottom, "Odtwarzanie / generator", "output")
+        self.playback_output.pack(side="left", fill="x", expand=True)
+        self.playback_output.combo.configure(width=26)
         self.auto_settings = receiver.auto_settings
         self.text_input = receiver.chat.compose
         files = ttk.LabelFrame(layout["files"], text="Wyślij plik / zdjęcie")
@@ -60,8 +63,10 @@ class Transmitter(ttk.Frame):
     def _build_full_view(self):
         body = ttk.Frame(self, padding=14)
         body.pack(fill="both", expand=True)
-        self.output = DevicePicker(body, "Wyjście dźwięku", "output")
+        self.output = DevicePicker(body, "Wyjście nadawania", "output")
         self.output.pack(fill="x", pady=(0, 12))
+        self.playback_output = DevicePicker(body, "Wyjście odtwarzania / generatora", "output")
+        self.playback_output.pack(fill="x", pady=(0, 12))
 
         level_box = ttk.LabelFrame(body, text="Poziom sygnału [%]")
         level_box.pack(fill="x", pady=(0, 12))
@@ -389,7 +394,7 @@ class Transmitter(ttk.Frame):
     def start_tone(self) -> None:
         self.sweep_mode = False
         try:
-            device = self.output.selected()
+            device = self.playback_output.selected()
             hz = self.tone_hz.get()
             sample_rate = int(self.generator_rate.get())
             self._update_generator()
@@ -410,7 +415,7 @@ class Transmitter(ttk.Frame):
         self.sweep_mode = False
         try:
             self._prepare_output()
-            self.player.play_file(self.audio_path.get(), self.output.selected(), self.level.get() / 100)
+            self.player.play_file(self.audio_path.get(), self.playback_output.selected(), self.level.get() / 100)
             self.status.set(f"Odtwarzanie: {Path(self.audio_path.get()).name}")
         except ValueError as exc:
             messagebox.showerror("Nie można odtworzyć", str(exc))

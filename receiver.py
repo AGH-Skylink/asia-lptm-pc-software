@@ -37,19 +37,28 @@ from transfers import FILE_MAGIC, NEGOTIATION, FileReceiver, bootstrap_config, p
 
 class Receiver(ttk.Frame):
     def _build_transceiver_view(self, layout):
-        self.input = DevicePicker(layout["devices"], "Wejście", "input")
+        devices_top = ttk.Frame(layout["devices"])
+        devices_top.pack(fill="x")
+        self.devices_bottom = ttk.Frame(layout["devices"])
+        self.devices_bottom.pack(fill="x", pady=(6, 0))
+        self.input = DevicePicker(devices_top, "Wejście", "input")
         self.input.pack(side="left", fill="x", expand=True, padx=(0, 12))
-        self.output = DevicePicker(layout["devices"], "Wyjście", "output")
+        self.output = DevicePicker(devices_top, "Nadawanie", "output")
         self.output.pack(side="left", fill="x", expand=True)
         self.input.combo.configure(width=26)
         self.output.combo.configure(width=26)
+        self.monitor_output = DevicePicker(self.devices_bottom, "Odsłuch mikrofonu", "output")
+        self.monitor_output.pack(side="left", fill="x", expand=True, padx=(0, 12))
+        self.monitor_output.combo.configure(width=26)
+        self.monitor_output.combo.bind("<<ComboboxSelected>>", self._monitor_settings_changed)
         controls = layout["transport"]
         self.start_button = ttk.Button(controls, text="Rozpocznij odbiór", command=self.start)
         self.start_button.pack(side="left")
         self.stop_button = ttk.Button(controls, text="Zatrzymaj odbiór", command=self.stop, state="disabled")
         self.stop_button.pack(side="left", padx=6)
         ttk.Checkbutton(controls, text="Automatyczne ustawienia", variable=self.auto_settings).pack(side="left", padx=8)
-        ttk.Checkbutton(controls, text="Odsłuch", variable=self.listen).pack(side="left", padx=8)
+        ttk.Checkbutton(controls, text="Odsłuch", variable=self.listen,
+                        command=self._monitor_settings_changed).pack(side="left", padx=8)
         self.chat = ChatPanel(layout["chat"], self._send_chat)
         self.chat.pack(fill="both", expand=True)
         self.chat.log.configure(width=40, height=12)
@@ -126,8 +135,11 @@ class Receiver(ttk.Frame):
         body = scroll.content
         self.input = DevicePicker(body, "Mikrofon", "input")
         self.input.pack(fill="x", pady=(0, 8))
-        self.output = DevicePicker(body, "Wyjście odsłuchu / czatu", "output")
+        self.output = DevicePicker(body, "Wyjście nadawania czatu", "output")
         self.output.pack(fill="x", pady=(0, 10))
+        self.monitor_output = DevicePicker(body, "Wyjście odsłuchu mikrofonu", "output")
+        self.monitor_output.pack(fill="x", pady=(0, 10))
+        self.monitor_output.combo.bind("<<ComboboxSelected>>", self._monitor_settings_changed)
         self.fsk = FSKFields(body)
         self.fsk.pack(fill="x", pady=(0, 10))
 
@@ -135,6 +147,7 @@ class Receiver(ttk.Frame):
         controls.pack(fill="x", pady=(0, 12))
         ttk.Checkbutton(
             controls, text="Odsłuch mikrofonu na głośniku", variable=self.listen,
+            command=self._monitor_settings_changed,
         ).pack(side="left")
         self.start_button = ttk.Button(controls, text="Rozpocznij odbiór", command=self.start)
         self.start_button.pack(side="right")
@@ -370,6 +383,14 @@ class Receiver(ttk.Frame):
             self.stop()
         return "break"
 
+    def _monitor_settings_changed(self, _event=None):
+        if not self.audio.active:
+            return
+        try:
+            self.audio.set_monitor(self.monitor_output.selected() if self.listen.get() else None)
+        except (ValueError, OSError) as exc:
+            self.status.set(f"Nie można zmienić odsłuchu: {exc}")
+
     def _choose_scan_plan(self) -> None:
         path = filedialog.askopenfilename(filetypes=[("Plan CSV", "*.csv"), ("Wszystkie", "*.*")])
         if path:
@@ -487,7 +508,7 @@ class Receiver(ttk.Frame):
                 with Path(self.autosave_path.get()).open("a", encoding="utf-8"):
                     pass
             input_device = self.input.selected()
-            output_device = self.output.selected() if self.listen.get() else None
+            output_device = self.monitor_output.selected() if self.listen.get() else None
             self.decoder = FSKDecoder(config)
             self.bootstrap_decoder = FSKDecoder(bootstrap_config(config.sample_rate))
             cutoff = max(20, min(500, min(config.zero_hz, config.one_hz) / 3))
